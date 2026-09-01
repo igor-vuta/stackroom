@@ -102,7 +102,7 @@ jobs:
       # the whole matrix red - but we do want to know, hence the annotation.
       - name: Install pagefind
         continue-on-error: true
-        run: pip install "pagefind>=1.5"
+        run: pip install "pagefind[bin]>=1.5"
 
       # What the runner actually had. When a test fails only on macOS, this is
       # the first thing anybody wants to see.

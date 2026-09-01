@@ -1,0 +1,13 @@
+# The same response one review decision earlier, released 14 March 2019:
+# one passage still under a black box that the 2024 release opened, one not
+# yet under the box it later gained, and no annexes at all. It exists so that
+# `stackroom compare` has something true to say. See demo/README.md.
+
+title = "Bureau of Sunlight — response to BOS-2018-0117 (2019 release)"
+description = "The earlier release of the same file, 14 March 2019. Everything in it is invented."
+
+jurisdiction = "us"
+
+[ocr]
+languages = ["eng", "rus"]
+mode = "auto"

@@ -38,14 +38,10 @@ htmlcov/
 /site/
 .stackroom
 
-# What demo/build-demo.py writes: the synthetic PDFs (several megabytes that
-# regenerate byte for byte) and the built sites. The script itself and its
-# README are committed - they are the demo. See demo/README.md.
-/demo/release-2019/
-/demo/release-2024/
-/demo/ridgeway-2024/
-/demo/site/
-/demo/site-ridgeway/
+# What demo/build-demo.py writes - the synthetic PDFs and the built sites - is
+# ignored by demo/.gitignore. What a person wrote - the script, its README, and
+# each collection's stackroom.toml and about.md - is committed. See
+# demo/README.md.
 
 # A safety rail, not a rule about file types. The test suite manufactures the
 # PDFs it needs (tests/synth.py) precisely so that no document has to be checked

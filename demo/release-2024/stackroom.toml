@@ -1,0 +1,15 @@
+# The main demo collection: the release the README screenshots are of.
+# See demo/README.md for what it is built to exercise and why.
+
+title = "Bureau of Sunlight — response to BOS-2018-0117"
+description = "Twenty-one pages in four documents, released 21 February 2024. Everything in them is invented."
+
+# US FOIA (b) codes and the Privacy Act code (k)(2).
+jurisdiction = "us"
+
+[ocr]
+# The scanned annexe is English; the letter from Zerkalsk is Russian, and
+# although its text layer is real, listing rus keeps the recogniser honest
+# about any page of it that arrives as a scan.
+languages = ["eng", "rus"]
+mode = "auto"

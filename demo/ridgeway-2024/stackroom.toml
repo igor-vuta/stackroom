@@ -1,0 +1,14 @@
+# The second demo collection. It exists because Stackroom reads one
+# jurisdiction's exemption vocabulary per collection, so showing a second
+# vocabulary means publishing a second archive. See demo/README.md.
+
+title = "Ridgeway Commons Trust — response to RCT-2024-006"
+description = "A four-page response under the Freedom of Information Act 2000. Everything in it is invented."
+
+# UK FOIA 2000: s.36(2), s.40(2), s.43(2) are the codes stamped on these pages.
+jurisdiction = "uk"
+
+[ocr]
+# The response is born-digital; nothing here needs recognising.
+languages = ["eng"]
+mode = "auto"
