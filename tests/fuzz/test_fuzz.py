@@ -65,6 +65,13 @@ def test_a_hostile_document_neither_hangs_nor_escapes(name, tmp_path):
     _, filename, data = next(
         case for case in corpus.hazard_cases(SMOKE_SEED) if case[0] == name
     )
+    try:
+        (tmp_path / filename).touch()
+        (tmp_path / filename).unlink()
+    except OSError:  # pragma: no cover - depends on the host
+        # APFS refuses a name that is not valid UTF-8, so the hazard cannot
+        # exist on this filesystem, let alone reach the build.
+        pytest.skip(f"this filesystem refuses the case's filename: {name}")
     failure, elapsed, verdict = harness.run_case(
         name, filename, data, SMOKE_SEED,
         budget=harness.DEFAULT_BUDGET, keep=True, root=tmp_path,

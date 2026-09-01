@@ -492,6 +492,11 @@ def test_slugs_are_made_unique_across_unicode_normalisation(tmp_path):
                 f"BT /F1 11 Tf 72 700 Td (v{i}) Tj ET\n".encode() + rawpdf.prose_lines()
             )
         )
+    if len(list(tmp_path.iterdir())) < 2:  # pragma: no cover - depends on the host
+        # A normalisation-insensitive filesystem (APFS, HFS+) folds the two
+        # spellings into one file, so the collision this test guards against
+        # cannot arise there.
+        pytest.skip("this filesystem folds NFC and NFD into one name")
     usable, _ = discover_mod.discover(tmp_path)
     slugs = [f.slug for f in usable if f.kind == "pdf"]
     assert len(slugs) == 2
@@ -738,13 +743,16 @@ def test_the_cli_says_which_configuration_file_it_used(tmp_path, capsys):
     release.mkdir()
 
     cli_mod._load_config(release, None)
-    out = capsys.readouterr().out
+    # Rich wraps the announcement around the path, and where the line breaks
+    # fall depends on how long tmp_path is - so read it with the whitespace
+    # squashed to single spaces.
+    out = " ".join(capsys.readouterr().out.split())
     assert "stackroom.toml" in out
     assert "not inside" in out, "a config from outside the named folder was used quietly"
 
     (release / "stackroom.toml").write_text('title = "Theirs"\n', encoding="utf-8")
     cli_mod._load_config(release, None)
-    assert "not inside" not in capsys.readouterr().out
+    assert "not inside" not in " ".join(capsys.readouterr().out.split())
 
 
 # --------------------------------------------------------------------------
@@ -1703,7 +1711,12 @@ def test_a_filename_that_is_not_valid_utf8_does_not_crash_the_build(tmp_path):
     folder.mkdir()
     (folder / "stackroom.toml").write_text('title = "B"\n', encoding="utf-8")
     name = os.fsdecode(b"report-\xff\xfe-final.pdf")
-    (folder / name).write_bytes(rawpdf.page_pdf(rawpdf.prose_lines(3)))
+    try:
+        (folder / name).write_bytes(rawpdf.page_pdf(rawpdf.prose_lines(3)))
+    except OSError:  # pragma: no cover - depends on the host
+        # APFS refuses to create a name that is not valid UTF-8 (EILSEQ), so
+        # on macOS this hazard cannot reach the build in the first place.
+        pytest.skip("this filesystem refuses undecodable filenames")
 
     out = tmp_path / "out"
     build_folder(folder, out)  # must not raise
@@ -1817,7 +1830,11 @@ def test_check_says_where_it_writes_and_can_be_pointed_somewhere_else(tmp_path):
         cli_mod.app, ["check", str(folder), "--scratch", str(elsewhere)]
     )
     assert result.exit_code == 0, result.output
-    assert str(elsewhere) in result.output, "check did not say where it was writing"
+    # Rich soft-wraps long paths across lines, and how long the path is
+    # depends on where pytest puts tmp_path, so compare with the whitespace
+    # squashed out.
+    flat = "".join(result.output.split())
+    assert str(elsewhere) in flat, "check did not say where it was writing"
     assert elsewhere.is_dir()
 
 

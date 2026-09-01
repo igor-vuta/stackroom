@@ -915,8 +915,14 @@ def test_a_box_over_the_gaps_between_visible_words_wipes_out_nothing(tmp_path):
     crop = _Crop(box.box, renderer(box.box))
     covered = _CharIndex(_page_parts(page)[1]).covered(box)
     per_char = [(c.text, crop.hides(c.box)) for c in covered]
-    assert [t for t, flat in per_char if flat] == [" ", " ", " ", " "], per_char
-    assert sum(1 for t, flat in per_char if flat is False) == 24, per_char
+    # How many of the four space cells rasterise as solid box colour varies
+    # with the poppler build - anti-aliasing at a cell edge can leave one
+    # reading as visible - so the reproduction is the shape, not the count:
+    # something hidden, all of it whitespace, and every real glyph visible.
+    hidden_texts = [t for t, flat in per_char if flat]
+    assert hidden_texts and all(t == " " for t in hidden_texts), per_char
+    assert sum(1 for t, _ in per_char if t != " ") == 24, per_char
+    assert all(flat is False for t, flat in per_char if t != " "), per_char
 
     result = analyse_page(page, crop_renderer=renderer)
     assert result.hidden == [], "the leak check must stay quiet on this page"

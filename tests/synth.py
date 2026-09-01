@@ -240,6 +240,32 @@ def image_only_pdf(path: Path, images: list[Image.Image]) -> Path:
 # --------------------------------------------------------------------------
 
 
+def mono_font(size: int):
+    """The first monospace TrueType this host has, at a size Tesseract can read.
+
+    The tests that rasterise a "typed page" need real glyphs: on a host with
+    none of the known fonts, the old fallback was PIL's built-in bitmap font,
+    whose 6-pixel letters turned every OCR, quality and redaction-geometry
+    test into a test of reading dust. Pillow's own scalable default (>=10.1)
+    keeps even the last resort legible.
+    """
+    from PIL import ImageFont
+
+    for path in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",  # Debian/Ubuntu
+        # Menlo is Apple's DejaVu Sans Mono derivative - same Bitstream Vera
+        # ancestry, near-identical metrics - so the geometry-sensitive tests
+        # see the same word shapes on both platforms.
+        "/System/Library/Fonts/Menlo.ttc",  # macOS
+        "/System/Library/Fonts/Supplemental/Courier New.ttf",  # macOS, older
+    ):
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default(size)  # pragma: no cover - depends on the host
+
+
 def typed_page(
     width: int = 1275,
     height: int = 1650,
@@ -252,16 +278,9 @@ def typed_page(
     scan_border: bool = False,
 ) -> Image.Image:
     """A grayscale page that looks like a photocopied typed document."""
-    from PIL import ImageFont
-
     im = Image.new("L", (width, height), 246)
     d = ImageDraw.Draw(im)
-    try:
-        font = ImageFont.truetype(
-            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 22
-        )
-    except OSError:  # pragma: no cover - depends on the host
-        font = ImageFont.load_default()
+    font = mono_font(22)
 
     rnd = random.Random(11)
     y = 150

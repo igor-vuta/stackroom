@@ -210,14 +210,11 @@ def test_min_conf_filters_words_and_keeps_the_lines_dense(page: Image.Image) -> 
 
 def marker_page(width: int = 1200, height: int = 1600) -> Image.Image:
     """A page with one unmistakable word in the top-left quadrant."""
-    from PIL import ImageDraw, ImageFont
+    from PIL import ImageDraw
 
     img = Image.new("L", (width, height), 246)
     draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 44)
-    except OSError:  # pragma: no cover - depends on the host
-        font = ImageFont.load_default()
+    font = synth.mono_font(44)
     draw.text((110, 110), "ZEBRAFISH", fill=20, font=font)
     draw.text((110, 700), "middle of the page", fill=20, font=font)
     draw.text((110, 1400), "bottom anchor line", fill=20, font=font)
