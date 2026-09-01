@@ -1,0 +1,460 @@
+/* --------------------------------------------------------------------------
+   Comparing two releases
+   --------------------------------------------------------------------------
+   The only pages in this archive that make a claim about an agency rather than
+   showing what it sent. Everything here is arranged so that the claim and the
+   evidence for it are never more than one glance apart.
+
+   Three things that look like taste and are not:
+
+   1. **Nothing is encoded in colour alone.** Every confidence carries a word
+      as well as a treatment, every rectangle in a diagram has a shape cue -
+      solid, dashed, unstroked - as well as a fill, and the caption under each
+      diagram names all three. A reader who cannot separate the accent from the
+      ink loses nothing but the speed.
+
+   2. **Newly withheld text is set as a redaction, not as a deletion.** Paper
+      on ink, the way `--withheld` is used everywhere else in this stylesheet.
+      A strikethrough would say the words were removed from the record; they
+      were not, they were covered, and one release still shows them.
+
+   3. **The diagrams are true to scale.** A rectangle's area is its share of
+      the page it came from, at the position it sat, exactly as in the negative.
+      Nothing is normalised to make a row of them tidy.
+
+   Scoped entirely to `.cmp-*`; adds nothing to the classes the rest of the
+   archive uses.
+   -------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------- the two releases */
+
+.cmp-releases__name {
+  font-size: var(--step-1);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* The two headline counts. Large, because on most comparisons they are zero
+   and a reader has to be able to see that they are zero without reading. */
+.cmp-big { color: var(--accent); }
+
+/* ---------------------------------------------------- the key */
+
+.cmp-key {
+  list-style: none;
+  margin: var(--space-2) 0 var(--space-3);
+  padding: 0;
+  max-width: var(--measure);
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+}
+
+.cmp-key li {
+  margin-bottom: 0.45rem;
+  padding-left: 0.1rem;
+}
+
+/* ---------------------------------------------------- tags */
+
+/* A word, in a box, at the size of the type around it. Not a coloured dot: the
+   thing being labelled is how much this archive is willing to claim, and that
+   has to survive being printed, being read aloud, and being looked at by
+   somebody who does not know the convention. */
+.cmp-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  padding: 0.05em 0.42em;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.cmp-tag--corroborated,
+.cmp-tag--certain {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cmp-tag--suspected,
+.cmp-tag--low {
+  border-color: var(--unreadable);
+  color: var(--unreadable);
+}
+
+.cmp-tag--geometry,
+.cmp-tag--medium,
+.cmp-tag--gone,
+.cmp-tag--added,
+.cmp-tag--moved { color: var(--ink-muted); }
+
+/* ---------------------------------------------------- the alignment table */
+
+.cmp-align { width: 100%; }
+.cmp-align td { vertical-align: baseline; }
+
+/* The similarity column. Not the archive's `.n`, which drops its right padding
+   because in every other table here the numeric column is the last one - this
+   one sits in the middle, and without a gutter the score runs into the word
+   beside it. A class of its own rather than an override: the gutter above it
+   is the base's and stays the base's. */
+.cmp-score {
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+
+.cmp-stamp {
+  font-size: 0.85em;
+  color: var(--ink-faint);
+}
+
+.cmp-evidence {
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+}
+
+.cmp-none { color: var(--ink-faint); }
+
+/* A row we are not confident about is not hidden and is not shouted at. It is
+   marked on its left edge, which is the one place a table can carry a state
+   without competing with the numbers in it. */
+.cmp-align__row--low td:first-child { box-shadow: inset 2px 0 0 var(--unreadable); }
+.cmp-align__row--gap td:first-child { box-shadow: inset 2px 0 0 var(--rule-strong); }
+
+/* ---------------------------------------------------- documents */
+
+.cmp-doc .cmp-count { font-weight: 600; }
+.cmp-refused { color: var(--unreadable); }
+
+.cmp-alias {
+  color: var(--ink-faint);
+  font-size: var(--step--1);
+}
+
+.cmp-was { font-style: italic; }
+
+/* ---------------------------------------------------- one changed page */
+
+.cmp-page {
+  margin: var(--space-4) 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+.cmp-page__title {
+  font-size: var(--step-1);
+  margin: 0 0 var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.7rem;
+}
+
+.cmp-page__from {
+  font-weight: 400;
+  font-size: var(--step--1);
+  color: var(--ink-faint);
+}
+
+.cmp-page__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+/* The diagram sits beside the findings once there is room for both to be read
+   at once, which is the whole point of it - a reader checking a quotation
+   against the shape of the page should not have to scroll between them. */
+@media (min-width: 52rem) {
+  .cmp-page__body {
+    grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.cmp-figure { margin: 0; }
+
+/* ---------------------------------------------------- the diagram */
+
+.cmp-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+}
+
+.cmp-sheet { fill: var(--paper-raised); }
+
+/* Still covered: the ink, quieted, because it is the part that did not change.
+   It has to be legible as a black box and must not compete with the two that
+   did change.
+
+   0.55 and not lower. This rectangle has no stroke, so the fill *is* the thing
+   that has to be seen, and WCAG 1.4.11 asks 3:1 of it against what is next to
+   it. Composited over the sheet it draws on, 0.45 measured 2.88:1 in the light
+   palette; 0.55 measures 3.89:1 there and 5.12:1 in the dark one. */
+.cmp-kept {
+  fill: var(--withheld);
+  opacity: 0.55;
+}
+
+/* Covered since the earlier release. The ink at full strength with an accent
+   edge: this is the rarer finding and the more interesting one. */
+.cmp-imposed {
+  fill: var(--withheld);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+/* Uncovered since the earlier release: an outline where a box used to be, with
+   almost nothing inside it, dashed so it is distinguishable from the one above
+   with no colour at all. The absence is drawn; that is rule three of this
+   stylesheet taken literally.
+
+   The dashed stroke is what has to clear 3:1, and does - 7.06:1 against the
+   sheet in the light palette, 7.84:1 in the dark. The fill is a wash at 1.19:1
+   and is deliberately not doing that work: it is there so the shape reads as an
+   area rather than as four lines, and if it disappeared entirely the rectangle
+   would still be identifiable by its edge. */
+.cmp-lifted {
+  fill: var(--accent-quiet);
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-dasharray: 12 8;
+}
+
+.cmp-figure__caption {
+  margin-top: 0.5rem;
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.cmp-swatch {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.6em;
+  margin-right: 0.3em;
+  vertical-align: -0.02em;
+  border: 1px solid transparent;
+}
+
+.cmp-swatch--kept { background: var(--withheld); opacity: 0.55; }
+.cmp-swatch--imposed { background: var(--withheld); border-color: var(--accent); }
+.cmp-swatch--lifted { background: var(--accent-quiet); border: 1px dashed var(--accent); }
+
+.cmp-legend {
+  display: inline-block;
+  white-space: nowrap;
+  margin-right: 0.75em;
+}
+
+/* ---------------------------------------------------- the two sheets */
+
+.cmp-sheets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: var(--space-2);
+}
+
+.cmp-sheet-fig { margin: 0; }
+
+.cmp-sheet-fig img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+}
+
+.cmp-sheet-fig figcaption {
+  margin-top: 0.3rem;
+  font-size: var(--step--1);
+  color: var(--ink-faint);
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------- findings */
+
+.cmp-finding-title {
+  font-size: var(--step-0);
+  font-weight: 600;
+  margin: var(--space-3) 0 0.2rem;
+}
+
+.cmp-finding-title:first-child { margin-top: 0; }
+
+.cmp-finding-note {
+  margin: 0 0 var(--space-2);
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+  max-width: var(--measure);
+}
+
+.cmp-findings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cmp-finding {
+  margin-bottom: var(--space-2);
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--rule-strong);
+}
+
+.cmp-finding[data-confidence="corroborated"] { border-left-color: var(--accent); }
+.cmp-finding[data-confidence="suspected"] { border-left-color: var(--unreadable); }
+
+.cmp-quote {
+  font-family: var(--font-serif);
+  font-size: var(--step-1);
+  line-height: 1.55;
+  margin: 0 0 0.3rem;
+  max-width: var(--measure);
+  overflow-wrap: break-word;
+}
+
+.cmp-quote__context { color: var(--ink-faint); }
+
+/* Text this release publishes and the earlier one covered. The accent ground
+   and a rule under it, so the mark survives being read in greyscale. Not the
+   search highlight: a found word and a disclosed word are different facts and
+   this archive should not say them in the same colour. */
+.cmp-quote__new {
+  background: var(--accent-quiet);
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  padding: 0.05em 0.15em;
+}
+
+/* Text the earlier release published and this one covers: set as a redaction,
+   because that is what happened to it. */
+.cmp-quote__gone {
+  background: var(--withheld);
+  color: var(--withheld-ink);
+  padding: 0.05em 0.2em;
+}
+
+.cmp-quote__weak {
+  border-bottom: 1px dashed var(--edge);
+  padding-bottom: 0.05em;
+}
+
+.cmp-finding__meta {
+  margin: 0;
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.4rem;
+  max-width: var(--measure);
+}
+
+.cmp-geometry {
+  margin: var(--space-3) 0 0;
+  font-size: var(--step--1);
+  color: var(--ink-faint);
+  max-width: var(--measure);
+}
+
+.cmp-details {
+  margin: var(--space-3) 0;
+  border-left: 2px solid var(--rule);
+  padding-left: 0.9rem;
+}
+
+.cmp-details summary {
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-size: var(--step--1);
+}
+
+.cmp-details summary:hover { color: var(--ink); }
+.cmp-details[open] summary { margin-bottom: var(--space-2); }
+
+.cmp-pagelist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  font-size: var(--step-0);
+}
+
+.cmp-caveats p { max-width: var(--measure); }
+
+/* ---------------------------------------------------- the filter */
+
+/* Added by assets/js/compare.js and hidden until it arrives, because a control
+   that does nothing is worse than no control. Same argument as the negative's
+   filter, and the author rule is needed for the same reason: [hidden] alone
+   loses to the display above it. */
+.cmp-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.1rem;
+  font-size: var(--step--1);
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--ink-muted);
+}
+
+.cmp-filter[hidden] { display: none; }
+
+/* A fieldset, because the two choices are one question and a screen reader
+   should hear it as one. Its own border and padding are the browser's idea of
+   what that looks like and are not this stylesheet's. */
+.cmp-filter {
+  border: 0;
+  padding: 0;
+  margin-inline: 0;
+}
+
+.cmp-filter__count {
+  color: var(--ink-faint);
+  flex-basis: 100%;
+}
+
+.cmp-filter label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.cmp-filter input { accent-color: var(--accent); }
+
+/* ---------------------------------------------------- forced colours */
+
+/* SVG fill is not touched by forced-colours mode, so every rectangle above
+   would keep a colour chosen against a paper that is no longer there and the
+   diagrams would go black on black. The same failure `negative.css` documents,
+   and the same fix: name the system colours explicitly, and keep the shape
+   cues doing the work the fills can no longer do. */
+@media (forced-colors: active) {
+  .cmp-diagram { border-color: CanvasText; }
+  .cmp-sheet { fill: Canvas; }
+  .cmp-kept { fill: CanvasText; opacity: 1; }
+  .cmp-imposed { fill: CanvasText; stroke: Highlight; stroke-width: 5; }
+  .cmp-lifted { fill: Canvas; stroke: Highlight; stroke-width: 5; }
+  .cmp-swatch { border-color: CanvasText; }
+  .cmp-swatch--kept { background: CanvasText; opacity: 1; }
+  .cmp-swatch--imposed { background: CanvasText; border-color: Highlight; }
+  .cmp-swatch--lifted { background: Canvas; border: 1px dashed Highlight; }
+  .cmp-quote__new { background: Canvas; box-shadow: none; border-bottom: 2px solid Highlight; }
+  .cmp-quote__gone { background: CanvasText; color: Canvas; forced-color-adjust: none; }
+  .cmp-tag { border-color: CanvasText; color: CanvasText; }
+  .cmp-finding { border-left-color: CanvasText; }
+  .cmp-align__row--low td:first-child,
+  .cmp-align__row--gap td:first-child { box-shadow: inset 2px 0 0 CanvasText; }
+}

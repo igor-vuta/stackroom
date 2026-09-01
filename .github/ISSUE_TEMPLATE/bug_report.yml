@@ -1,0 +1,123 @@
+name: Bug report
+description: Stackroom did something wrong, crashed, or would not run.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you start:
+
+        - **If Stackroom told you a document was clear and it was not** — a
+          black box over text it failed to find — do not file this here. That
+          goes privately: see [SECURITY.md](https://github.com/stackroom/stackroom/blob/main/SECURITY.md).
+        - **If Stackroom mis-read a document** — wrong redaction count, missed
+          exemption code, a legible page marked unreadable — use the
+          [*A document that breaks it*](https://github.com/stackroom/stackroom/issues/new?template=document_that_breaks_it.yml)
+          template instead. It asks for the things that make such a report
+          fixable.
+        - **Never attach a document that is not already public.** Not a draft,
+          not a release you have not published, not anything a source gave you.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: >
+        What you ran, what you expected, and what you got instead. Paste the
+        terminal output — all of it, including the command line. If it is long,
+        the first screen and the last screen are the useful parts.
+      placeholder: |
+        $ stackroom build ./release
+        …
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: >
+        Ideally the shortest sequence that shows the problem. If it needs a
+        particular document, say what kind — a scan, a born-digital PDF, 40
+        pages, produced by Adobe — rather than attaching it.
+      placeholder: |
+        1. stackroom init ./release
+        2. put a two-page scanned PDF in it
+        3. stackroom build ./release
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Stackroom version
+      description: The output of `stackroom --version`.
+      placeholder: "stackroom 0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: The output of `python3 --version` in the environment where you installed it.
+      placeholder: "Python 3.12.4"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Windows Subsystem for Linux
+        - Something else (say which below)
+    validations:
+      required: true
+
+  - type: input
+    id: os-detail
+    attributes:
+      label: Which one, exactly
+      description: Distribution and release, or macOS version. Package versions of poppler and tesseract differ a lot between them.
+      placeholder: "Ubuntu 24.04, or macOS 15.5 on Apple silicon"
+    validations:
+      required: false
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: stackroom doctor
+      description: >
+        Paste the whole output. This is the single most useful field in the
+        form: most "it crashed" reports turn out to be a missing poppler, a
+        Tesseract without the right language data, or an install where pagefind
+        never arrived.
+      render: text
+      placeholder: |
+        $ stackroom doctor
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Your stackroom.toml
+      description: If you have one. Remove the title if the collection is not public yet.
+      render: toml
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before you post
+      options:
+        - label: I have not attached, quoted or linked any document that is not already public.
+          required: true
+        - label: This is not a case of Stackroom failing to find a redacted-but-recoverable passage. (That one goes to SECURITY.md.)
+          required: true

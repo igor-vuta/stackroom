@@ -1,0 +1,185 @@
+{% extends "base.html.jinja" %}
+{#-
+  What changed between two releases of the same documents.
+
+  This page makes claims about an agency, which no other page in this archive
+  does. The withheld ledger counts black boxes; this one says "they published
+  this sentence in one release and covered it in another", and a reader has no
+  way to check that except by trusting how it was arrived at. So the method is
+  on the page, above the findings, in the same size type - not in a footnote,
+  not behind a link, not in the repository.
+
+  Three things are therefore load-bearing here and should not be tidied away:
+
+    - The two releases are named, digested and dated at the top, before any
+      number. A comparison of unnamed things is a rumour.
+    - Every count is a count of *corroborated* findings, and the word means
+      something specific that is defined on the page.
+    - "How this can be wrong" is a section, not a sentence, and it is above the
+      fold on a phone.
+
+  Every sentence here comes from the catalogue, like the rest of the site. The
+  two release *labels* do not: an operator wrote them, they name particular
+  batches of paper, and translating "the 2019 release" would be inventing a
+  fact. They are dropped into messages as parameters.
+-#}
+{% block title %}{{ t('title.join', page=t('compare.short'), site=collection.title) }}{% endblock %}
+
+{% block main %}
+<div class="wrap wrap--narrow">
+
+  <h1 class="page-title">{{ t('compare.heading') }}</h1>
+  <p class="page-subtitle">{{ t('compare.intro') }}</p>
+
+  <dl class="ledger cmp-releases">
+    <div>
+      <dt>{{ t('compare.release_old') }}</dt>
+      <dd class="cmp-releases__name">{{ comparison.old.label }}<small>{{ t('compare.release_meta',
+          pages=t('count.pages', count=comparison.old.pages),
+          documents=t('count.documents', count=comparison.old.documents)) }}
+          {%- if comparison.old.digest %}{{ t('compare.release_digest_html', digest=comparison.old.digest[:16]) }}{% endif %}</small></dd>
+    </div>
+    <div>
+      <dt>{{ t('compare.release_new') }}</dt>
+      <dd class="cmp-releases__name">{{ comparison.new.label }}<small>{{ t('compare.release_meta',
+          pages=t('count.pages', count=comparison.new.pages),
+          documents=t('count.documents', count=comparison.new.documents)) }}
+          {%- if comparison.new.digest %}{{ t('compare.release_digest_html', digest=comparison.new.digest[:16]) }}{% endif %}</small></dd>
+    </div>
+    <div>
+      <dt>{{ t('compare.matched') }}</dt>
+      <dd>{{ n(comparison.matched_pages) }}<small>{{ t('compare.matched_note', total=comparison.new.pages) }}</small></dd>
+    </div>
+  </dl>
+
+  {%- if not comparison.anything %}
+  <p class="empty">{{ t('compare.nothing') }}</p>
+  {%- else %}
+
+  <h2 class="section-title">{{ t('compare.headline') }}</h2>
+  <dl class="ledger">
+    <div>
+      <dt>{{ t('compare.disclosed_label') }}</dt>
+      <dd class="{{ 'cmp-big' if comparison.disclosed else '' }}">{{ n(comparison.disclosed) }}<small>{{ t('compare.disclosed_note') }}</small></dd>
+    </div>
+    <div>
+      <dt>{{ t('compare.withheld_label') }}</dt>
+      <dd class="{{ 'cmp-big' if comparison.withheld else '' }}">{{ n(comparison.withheld) }}<small>{{ t('compare.withheld_note') }}</small></dd>
+    </div>
+    <div>
+      <dt>{{ t('compare.lifted_label') }}</dt>
+      <dd>{{ n(comparison.lifted) }}<small>{{ t('compare.lifted_note') }}</small></dd>
+    </div>
+    <div>
+      <dt>{{ t('compare.imposed_label') }}</dt>
+      <dd>{{ n(comparison.imposed) }}<small>{{ t('compare.imposed_note') }}</small></dd>
+    </div>
+    <div>
+      <dt>{{ t('compare.pages_added_label') }}</dt>
+      <dd>{{ n(comparison.pages_added) }}<small>{{ t('compare.pages_added_note') }}</small></dd>
+    </div>
+    <div>
+      <dt>{{ t('compare.pages_gone_label') }}</dt>
+      <dd>{{ n(comparison.pages_removed) }}<small>{{ t('compare.pages_gone_note') }}</small></dd>
+    </div>
+    {%- if comparison.code_changes %}
+    <div>
+      <dt>{{ t('compare.codes_label') }}</dt>
+      <dd>{{ n(comparison.code_changes) }}<small>{{ t('compare.codes_note') }}</small></dd>
+    </div>
+    {%- endif %}
+  </dl>
+
+  <h2 class="section-title">{{ t('compare.how_heading') }}</h2>
+  <div class="notice">
+    <p>{{ t('compare.how_rule_html') }}</p>
+    <p>{{ t('compare.how_noise', count=comparison.noise_tokens) }}</p>
+  </div>
+
+  <ul class="cmp-key">
+    <li><span class="cmp-tag cmp-tag--corroborated">{{ t('compare.tag_corroborated') }}</span>
+        {{ t('compare.key_corroborated') }}</li>
+    <li><span class="cmp-tag cmp-tag--suspected">{{ t('compare.tag_suspected') }}</span>
+        {{ t('compare.key_suspected') }}</li>
+    <li><span class="cmp-tag cmp-tag--geometry">{{ t('compare.tag_geometry') }}</span>
+        {{ t('compare.key_geometry') }}</li>
+  </ul>
+
+  {%- for note in comparison.notes %}
+  <p class="section-note">{{ note }}</p>
+  {%- endfor %}
+
+  <h2 class="section-title">{{ t('compare.by_document') }}</h2>
+  <ul class="docs cmp-docs">
+    {%- for entry in entries %}
+    <li class="doc doc--textonly cmp-doc">
+      <div>
+        <h3 class="doc__title">
+          {%- if entry.changed %}<a href="{{ root }}compare/{{ entry.doc_id }}/index.html">{{ entry.title }}</a>
+          {%- else %}{{ entry.title }}{% endif %}</h3>
+        <p class="doc__meta">
+          {%- if entry.identical %}
+          <span>{{ t('compare.identical_short') }}</span>
+          {%- elif not entry.alignment.aligned %}
+          <span class="cmp-refused">{{ t('compare.refused_tag') }}</span>
+          <span class="sep" aria-hidden="true">·</span>
+          <span>{{ entry.alignment.refusal }}</span>
+          {%- else %}
+          {%- if entry.disclosed %}<span class="cmp-count">{{ t('compare.count_disclosed', count=entry.disclosed|length) }}</span>{% endif %}
+          {%- if entry.withheld %}{% if entry.disclosed %}<span class="sep" aria-hidden="true">·</span>{% endif %}<span class="cmp-count">{{ t('compare.count_withheld', count=entry.withheld|length) }}</span>{% endif %}
+          {%- if entry.lifted %}<span class="sep" aria-hidden="true">·</span><span>{{ t('compare.count_lifted', count=entry.lifted) }}</span>{% endif %}
+          {%- if entry.imposed %}<span class="sep" aria-hidden="true">·</span><span>{{ t('compare.count_imposed', count=entry.imposed) }}</span>{% endif %}
+          {%- if entry.new_only_pages %}<span class="sep" aria-hidden="true">·</span><span>{{ t('compare.count_pages_added', count=entry.new_only_pages|length) }}</span>{% endif %}
+          {%- if entry.old_only_pages %}<span class="sep" aria-hidden="true">·</span><span>{{ t('compare.count_pages_gone', count=entry.old_only_pages|length) }}</span>{% endif %}
+          {%- if not entry.changed %}<span>{{ t('compare.nothing_changed') }}</span>{% endif %}
+          {%- endif %}
+        </p>
+        {%- if entry.old_title and entry.old_title != entry.title %}
+        <p class="doc__meta cmp-alias">
+          {%- if evidence[entry.doc_id] %}{{ t('compare.matched_to_on_html', title=entry.old_title, evidence=evidence[entry.doc_id]) }}
+          {%- else %}{{ t('compare.matched_to_html', title=entry.old_title) }}{% endif %}</p>
+        {%- endif %}
+        {%- if entry.unusable_pairs %}
+        <p class="doc__meta cmp-alias">{{ t('compare.unusable', count=entry.unusable_pairs) }}</p>
+        {%- endif %}
+      </div>
+    </li>
+    {%- endfor %}
+  </ul>
+
+  {%- if comparison.unpaired_old or comparison.unpaired_new %}
+  <h2 class="section-title">{{ t('compare.unpaired_heading') }}</h2>
+  <p class="section-note">{{ t('compare.unpaired_note') }}</p>
+  <ul class="docs">
+    {%- for doc_id, title, pages in comparison.unpaired_old %}
+    <li class="doc doc--textonly">
+      <div>
+        <h3 class="doc__title">{{ title }}</h3>
+        <p class="doc__meta"><span>{{ t('compare.only_old') }}</span><span class="sep" aria-hidden="true">·</span><span>{{ t('count.pages', count=pages) }}</span></p>
+      </div>
+    </li>
+    {%- endfor %}
+    {%- for doc_id, title, pages in comparison.unpaired_new %}
+    <li class="doc doc--textonly">
+      <div>
+        <h3 class="doc__title"><a href="{{ root }}d/{{ doc_id }}/index.html">{{ title }}</a></h3>
+        <p class="doc__meta"><span>{{ t('compare.only_new') }}</span><span class="sep" aria-hidden="true">·</span><span>{{ t('count.pages', count=pages) }}</span></p>
+      </div>
+    </li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+
+  {%- endif %}
+
+  <h2 class="section-title" id="wrong">{{ t('compare.wrong_heading') }}</h2>
+  <div class="prose cmp-caveats">
+    <p>{{ t('compare.wrong_pages_html') }}</p>
+    <p>{{ t('compare.wrong_scans_html') }}</p>
+    <p>{{ t('compare.wrong_ocr_html') }}</p>
+    <p>{{ t('compare.wrong_absence_html') }}</p>
+    <p>{{ t('compare.wrong_hidden_html') }}</p>
+  </div>
+
+</div>
+{% endblock %}

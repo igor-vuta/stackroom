@@ -1,0 +1,337 @@
+/* --------------------------------------------------------------------------
+   The negative
+   --------------------------------------------------------------------------
+   A field of black rectangles: every passage removed from the release, at its
+   true size and in its true place. It is the third rule of this stylesheet -
+   absence is content - taken as far as it goes, which is a whole page where
+   the absence is the only thing drawn.
+
+   Everything here is scoped to .negative and adds nothing to the classes the
+   rest of the archive uses. Two things are worth knowing before editing:
+
+   1. The picture arrives from Python as inline SVG and is correct before any
+      script runs. The arrangements are radio buttons and sibling selectors,
+      not JavaScript, so a reader with scripts off can still regroup the field.
+
+   2. SVG fill is not overridden in forced-colours mode. Left alone, every
+      rectangle here keeps a colour chosen against a paper that is no longer
+      there, and the whole page turns into black on black or white on white.
+      The forced-colours block at the bottom is not a nicety; without it this
+      page is blank.
+   -------------------------------------------------------------------------- */
+
+.negative {
+  margin-block: var(--space-3) var(--space-5);
+}
+
+/* The reading column. The page keeps one left edge from the masthead to the
+   colophon - the wide wrapper - and the prose is held to a measure inside it
+   rather than being centred in a narrower wrapper of its own. */
+.negative__reading { max-width: 48rem; }
+
+/* --------------------------------------------------- picking an arrangement */
+
+/* The labels for the three visually-hidden radios above them. Same shape as
+   the masthead's nav, because it is the same gesture: choosing which view of
+   the same material you are looking at. */
+.negative__tabs,
+.negative__filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.1rem;
+  font-size: var(--step--1);
+  margin-bottom: var(--space-2);
+}
+
+/* An author rule beats the browser's own [hidden] whatever its specificity,
+   so a control that is inert until a script arrives has to be told twice to
+   stay away until then. Without this the filter is visible and dead on every
+   page loaded with scripts off. */
+.negative__filter[hidden] { display: none; }
+
+.negative__tabs-title {
+  color: var(--ink-faint);
+  margin-right: -0.4rem;
+}
+
+.negative__tab {
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding-block: 0.25rem;
+  border-bottom: 2px solid transparent;
+}
+
+.negative__tab:hover { color: var(--ink); }
+
+.negative__pane { display: none; margin: 0; }
+.negative--single .negative__pane { display: block; }
+
+/* One pair of rules per arrangement. The ids are fixed by the template, so
+   these can be written out rather than generated: three arrangements is the
+   whole set, and a reader of this file can see what the toggle does. */
+#arr-page:checked ~ .negative__pane--page,
+#arr-code:checked ~ .negative__pane--code,
+#arr-size:checked ~ .negative__pane--size { display: block; }
+
+#arr-page:checked ~ .negative__tabs .negative__tab[for="arr-page"],
+#arr-code:checked ~ .negative__tabs .negative__tab[for="arr-code"],
+#arr-size:checked ~ .negative__tabs .negative__tab[for="arr-size"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* The control is a hidden input, so the ring has to be put back on the label
+   the reader can actually see. */
+#arr-page:focus-visible ~ .negative__tabs .negative__tab[for="arr-page"],
+#arr-code:focus-visible ~ .negative__tabs .negative__tab[for="arr-code"],
+#arr-size:focus-visible ~ .negative__tabs .negative__tab[for="arr-size"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* The per-code filter. Inert without a script and hidden until one runs, so
+   nothing here is a control that does nothing. */
+.negative__chip {
+  font: inherit;
+  color: var(--ink-muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+
+.negative__chip:hover { color: var(--ink); }
+
+.negative__chip[aria-pressed="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* ------------------------------------------------------------- the field */
+
+.negative__field {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Redactions on adjacent lines are often a pixel apart at this scale, and
+     snapping them to the pixel grid welds them into one block. Sub-pixel
+     rectangles arrive faint here instead of vanishing, which is the truthful
+     way for something that small to appear. */
+  shape-rendering: geometricPrecision;
+  overflow: visible;
+}
+
+/* The subject. Set in ink rather than in black, like every other redaction in
+   this archive: a bar is a typographic object in the colour of the text it
+   replaced, which is also why it goes light in dark mode instead of staying
+   black on a dark ground. */
+.negative__field rect,
+.negative__field path { fill: var(--withheld); }
+
+/* The paper each page was printed on: the only thing in the picture that is
+   not a redaction, and it is there because "a fifth of the way down the page"
+   is not a statement you can make without the page. One path for every cell in
+   the release, because it is the same shape a thousand times over. */
+.negative__field .negative__paper { fill: var(--paper-sunk); stroke: none; }
+
+/* Dimmed by the filter. A lightness step, not a hue: the same rectangle,
+   still visible, no longer the one being asked about. The name of what is
+   picked out is always written above the field as well, so the state is never
+   carried by appearance alone. */
+.negative__field .is-dim { fill: var(--rule-strong); }
+
+.negative__band {
+  fill: var(--ink-faint);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+/* Links in the field carry no focus ring of their own: they are not in the tab
+   order, and the script that makes them reachable draws its own marker, which
+   has to be visible against paper and against a solid black cell alike. */
+.negative__field a { cursor: pointer; }
+.negative__field a:focus { outline: none; }
+
+.negative__marker {
+  fill: none;
+  pointer-events: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.negative__marker--halo {
+  stroke: var(--paper);
+  stroke-width: 5;
+}
+
+.negative__caption {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--step--1);
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------- the tooltip */
+
+/* What a rectangle is, for a reader who is pointing at it. It says the same
+   things the index list under the field says in full, so nothing depends on
+   it: it is a shortcut, not a source. */
+.negative__tip {
+  position: absolute;
+  z-index: 30;
+  max-width: min(22rem, calc(100vw - 2rem));
+  background: var(--paper-raised);
+  color: var(--ink);
+  border: 1px solid var(--edge);
+  padding: 0.5rem 0.7rem;
+  font-size: var(--step--1);
+  line-height: 1.45;
+  pointer-events: none;
+}
+
+.negative__tip strong { font-weight: 600; }
+.negative__tip .mono { white-space: nowrap; }
+.negative__tip p { margin: 0; }
+.negative__tip p + p { margin-top: 0.25rem; color: var(--ink-muted); }
+
+/* ---------------------------------------------------------------- the page */
+
+/* The blind spots read as a list of facts, not as a warning box: they are not
+   errors, they are the parts of the absence that have no shape, and they
+   belong on this page for exactly that reason. */
+.negative__gaps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3) 2rem;
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+@media (min-width: 40rem) {
+  .negative__gaps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.negative__gaps dt {
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.negative__gaps dd {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--step--1);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.negative__nocode { color: var(--ink-faint); }
+
+/* "42% of one page" is a quantity, not a sentence, and breaking it over three
+   lines on a phone turns a column of amounts into a paragraph. The table
+   scrolls in its own container instead, the way every other table here does. */
+.negative__amount { white-space: nowrap; }
+
+/* A numeric column that is not the last one. The table's own `.n` takes its
+   right padding away, which is right for a figure at the edge of the table
+   and runs two columns of numbers together anywhere else. */
+.negative__figure { text-align: right; }
+
+/* A document heading inside the index, sitting in the same list as its pages
+   so the reading order is document, then its pages, then the next document. */
+.negative__index-doc {
+  padding: var(--space-3) 0 0.35rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.negative__index-doc .doc__title { font-size: var(--step-0); color: var(--ink-muted); }
+.negative__index .doc { padding-block: 0.7rem; }
+.negative__index .doc__meta { margin-bottom: 0; }
+.negative__index h4 { font-size: var(--step-0); font-weight: 600; margin: 0 0 0.15rem; }
+
+/* --------------------------------------------------------------------------
+   The exemption filter on the withheld page
+   --------------------------------------------------------------------------
+   Pre-rendered rows and one `:target` rule per code, rather than JSON and a
+   script. The page is complete before anything runs: the codes are links, the
+   links are shareable, and if the rules below never apply the reader still
+   lands on the code they asked for with every page listed under it.
+   -------------------------------------------------------------------------- */
+
+.codefilter { position: relative; }
+
+/* Empty anchors carrying the :target state. They are the only way to say "the
+   reader chose this code" in CSS without a script. */
+.codefilter__anchor {
+  display: block;
+  height: 0;
+  /* The masthead is sticky; without this a jump lands the chosen code
+     underneath it. */
+  scroll-margin-top: 5rem;
+}
+
+.codefilter__note { display: none; }
+
+.codefilter__note--all { display: block; }
+
+.codefilter__uncited { color: var(--ink-faint); }
+
+/* --------------------------------------------------------------------------
+   Accessibility overrides
+   -------------------------------------------------------------------------- */
+
+@media (prefers-contrast: more) {
+  /* Two percent of warmth between the paper and the page it sits on is a
+     boundary at this size. Asked for contrast, the page gets an edge. */
+  .negative__field .negative__paper { stroke: var(--edge); stroke-width: 1; }
+  .negative__field .is-dim { fill: var(--ink-faint); }
+  .negative__tab, .negative__chip { color: var(--ink); }
+}
+
+/* Forced colours throw away every background an author chose and keep every
+   SVG fill, which is exactly backwards for this page: the rectangles would
+   keep an ink colour chosen for a paper that is gone, and the paper cells
+   would keep theirs, and the result is a solid block of one colour. Both are
+   restated in the reader's own palette, and the paper gets an edge so a page
+   with nothing withheld on it is still visibly a page. */
+@media (forced-colors: active) {
+  .negative__field .negative__paper {
+    fill: Canvas;
+    stroke: GrayText;
+    stroke-width: 1;
+  }
+  .negative__field rect,
+  .negative__field path { fill: CanvasText; }
+  .negative__field .negative__paper { fill: Canvas; }
+  .negative__field .is-dim { fill: GrayText; }
+  .negative__band { fill: CanvasText; }
+  .negative__marker { stroke: Highlight; }
+  .negative__marker--halo { stroke: Canvas; }
+  .negative__tip { border-color: CanvasText; }
+  .negative__tab, .negative__chip { border-bottom-color: transparent; }
+  #arr-page:checked ~ .negative__tabs .negative__tab[for="arr-page"],
+  #arr-code:checked ~ .negative__tabs .negative__tab[for="arr-code"],
+  #arr-size:checked ~ .negative__tabs .negative__tab[for="arr-size"],
+  .negative__chip[aria-pressed="true"] { border-bottom-color: Highlight; }
+}
+
+/* There is no `prefers-reduced-motion` block here because nothing on this page
+   moves. The field is up to eight thousand rectangles and a transition across
+   them would be a stutter rather than an animation; the tooltip appears where
+   the pointer already is and does not travel to get there. A reader who has
+   asked for less motion gets exactly the page everyone else gets.
+   -------------------------------------------------------------------------- */
+
+/* Printing: the picture is the point of the page, so it prints. */
+@media print {
+  /* The controls are not, so they do not: whichever arrangement was on screen
+     is the one on paper. */
+  .negative__tabs, .negative__filter, .negative__tip { display: none; }
+  .negative__pane { break-inside: avoid; }
+  .negative__field rect, .negative__field path { fill: #000; }
+  .negative__field .negative__paper { fill: #f2f2f2; }
+}

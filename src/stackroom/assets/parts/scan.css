@@ -1,0 +1,556 @@
+/* ==========================================================================
+   The scan, up close
+   --------------------------------------------------------------------------
+   Everything here serves one unfinished idea in the base stylesheet: the scan
+   beside the transcription is about 480px wide, which is enough to recognise a
+   page and not enough to read one. So the largest object in the archive was
+   decorative. This part gives it somewhere to go.
+
+   Four things live here, and they are all the same thing seen from different
+   distances:
+
+     .lens      the scan at full size, panned and zoomed
+     .scrub     the ribbon's preview tile - the scan at 240px, on hover
+     .passage   the affordance that turns a text selection into a citation
+     @view-transition   the scan carrying the movement between pages
+
+   The base stylesheet's three rules still hold. Nothing below tints the scan,
+   rounds it, or forces it to white; nothing below animates unless the movement
+   is telling the reader where something came from or went.
+
+   This file only adds. Where it needs a token that does not exist yet it
+   defines a new one rather than redefining an old one.
+   ========================================================================== */
+
+:root {
+  /* A print is examined on a dark board, and for a reason that applies here:
+     at full size the *edge* of the page is information - the skew, the copier
+     shadow, the guillotine crop - and a page edge against paper-coloured
+     ground is invisible. This is the only dark surface in the archive and it
+     exists so that the paper has a boundary. It is not a theme. */
+  --lens-ground: #26231d;
+  --lens-ink: #ede8de;        /* 12.1:1 on the ground */
+  --lens-ink-muted: #a39c8f;  /*  5.7:1 */
+  --lens-edge: #8a8274;       /*  3.9:1 - clears 1.4.11 for control borders */
+  --lens-veil: rgb(12 11 9 / 0.72);
+
+  /* --in / --out are hover timings, measured against a 200px control. A page
+     turn moves the largest object on the screen from one side of it to the
+     other, and 90ms across that distance reads as a dropped frame rather than
+     a movement. Same asymmetry - quick to arrive, slower to leave - restated
+     at the scale of the thing that is moving. */
+  --turn-in: 170ms;
+  --turn-out: 260ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lens-ground: #0d0c0a;
+    --lens-veil: rgb(0 0 0 / 0.8);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Getting in
+   --------------------------------------------------------------------------
+   Two routes to the same door, because they answer different readers.
+
+   `cursor: zoom-in` on the figure is the whole affordance for a pointer: it is
+   a system cursor with one meaning, it costs no pixels, and it does not put a
+   badge on top of the document. It is applied by script, so a page without
+   script never promises something it cannot do.
+
+   The button in the caption row is the route for a keyboard, a screen reader
+   and a touch screen - none of which can see a cursor. It sits in the line of
+   captions under the mount rather than floating over the scan, so it is
+   visible from the first frame instead of waiting for a hover that a phone
+   will never send.
+   -------------------------------------------------------------------------- */
+
+.scan__figure.is-zoomable { cursor: zoom-in; }
+
+.scan__open {
+  font: inherit;
+  font-size: var(--step--1);
+  line-height: inherit;
+  color: var(--ink-muted);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--edge);
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--out) var(--ease), border-color var(--out) var(--ease);
+}
+
+.scan__open:hover {
+  color: var(--ink);
+  border-bottom-color: currentColor;
+  transition-duration: var(--in);
+}
+
+/* --------------------------------------------------------------------------
+   The lens
+   --------------------------------------------------------------------------
+   A native <dialog>, opened modally, so that focus trapping, Escape, inertness
+   of the rest of the document and the return of focus on close are the
+   platform's problem rather than ours. Every one of those is something a
+   hand-rolled overlay gets wrong on some browser.
+   -------------------------------------------------------------------------- */
+
+.lens {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--lens-ground);
+  color: var(--lens-ink);
+  overflow: hidden;
+  display: none;
+}
+
+.lens[open] { display: flex; flex-direction: column; }
+
+.lens::backdrop { background: var(--lens-veil); }
+
+/* The stage is the window onto the page. It is focusable because it is a
+   control - arrows pan it, +/- zoom it - and a control you cannot tab to is
+   not a control. `touch-action: none` because every gesture inside it is ours:
+   letting the browser keep pinch-zoom here would zoom the interface rather
+   than the document, which is the wrong page. */
+.lens__stage {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  outline-offset: -3px;   /* the ring is inside the stage, not over the bar */
+}
+
+.lens__stage.is-panning { cursor: grabbing; }
+
+/* Transformed, not scrolled. A scroll container would round to whole pixels
+   and quantise the zoom; a transform is continuous, composited, and gives the
+   pinch gesture a fixed point to zoom about. */
+.lens__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  background: var(--paper-raised);
+  will-change: transform;
+}
+
+.lens__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: auto;
+}
+
+/* Past about two and a half times the scanned resolution, smoothing stops
+   helping and starts inventing: it draws edges that were never on the paper.
+   Below that it is genuinely easier to read, so it stays. The switch is set
+   where legibility stops being the argument. */
+.lens__canvas.is-magnified .lens__img { image-rendering: pixelated; }
+
+/* Same geometry, same percentages, same classes as the overlay on the page -
+   the boxes are cloned rather than recomputed, so a highlight can never be in
+   one place on the page and another place in the lens. */
+.lens__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Paging inside the lens is a real navigation, and a dialog is not captured by
+   a cross-document view transition - anything the browser animated there would
+   be the page underneath, which the reader cannot see. So the arrival is done
+   here, on the one object that changed.
+
+   A fade and not a slide, and that is a limit rather than a preference: the
+   canvas is inside a scale() transform, so every length in its own coordinate
+   space is multiplied by the zoom. A slide that reads correctly at fit is
+   eight times too far at 800%. The direction is not needed here anyway - the
+   reader pressed the button that caused it, one second ago. */
+@keyframes lens-arrive { from { opacity: 0; } }
+
+.lens__canvas.is-arriving {
+  animation: lens-arrive var(--turn-in) var(--ease) both;
+}
+
+.lens__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: 0.6rem var(--gutter);
+  border-top: 1px solid var(--lens-edge);
+  background: var(--lens-ground);
+  font-size: var(--step--1);
+}
+
+.lens__where { margin: 0; color: var(--lens-ink-muted); }
+.lens__group { display: flex; align-items: center; gap: 0.4rem; }
+.lens__spacer { flex: 1 1 auto; }
+
+.lens__level {
+  min-width: 3.6em;
+  text-align: center;
+  color: var(--lens-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lens button,
+.lens a.lens__step {
+  font: inherit;
+  font-size: var(--step--1);
+  color: var(--lens-ink);
+  background: none;
+  border: 1px solid var(--lens-edge);
+  padding: 0.3rem 0.7rem;
+  min-width: 2.2rem;
+  min-height: 2.2rem;   /* 2.2rem ≈ 35px: SC 2.5.8 wants 24, phones want more */
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--out) var(--ease),
+              border-color var(--out) var(--ease);
+}
+
+.lens button:hover,
+.lens a.lens__step:hover {
+  background: rgb(255 255 255 / 0.09);
+  border-color: var(--lens-ink-muted);
+  transition-duration: var(--in);
+}
+
+.lens button[disabled] {
+  color: var(--lens-ink-muted);
+  border-color: rgb(255 255 255 / 0.14);
+  cursor: default;
+}
+
+.lens button[disabled]:hover { background: none; }
+
+/* Not a hierarchy of buttons - there is no primary action in here - just the
+   one control that leaves, set apart from the ones that stay. */
+.lens__close { margin-left: auto; }
+
+@media (max-width: 34rem) {
+  .lens__bar { padding-inline: var(--space-2); gap: var(--space-1); }
+  .lens__where { flex: 1 1 100%; }
+  .lens__spacer { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   The ribbon, scrubbed
+   --------------------------------------------------------------------------
+   The strip already says what every page of the document is. Given a pointer
+   it can also say which page, and show it.
+
+   `touch-action: pan-y` rather than `none`: a horizontal drag along the strip
+   is a scrub and belongs to us, a vertical one is the reader trying to scroll
+   the page they are standing on and belongs to the browser. Taking both would
+   turn a 28px band across the full width of the document page into a place
+   where scrolling silently fails.
+   -------------------------------------------------------------------------- */
+
+.ribbon.is-live { cursor: pointer; touch-action: pan-y; }
+
+.scrub {
+  position: absolute;
+  z-index: 60;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background: var(--paper-raised);
+  border: 1px solid var(--edge);
+  padding: 0.3rem;
+  width: 8.5rem;
+  box-shadow: 0 2px 10px rgb(28 26 23 / 0.16);
+  opacity: 0;
+  transition: opacity var(--out) var(--ease);
+}
+
+.scrub.is-open { opacity: 1; transition-duration: var(--in); }
+
+/* The tile follows the pointer with no transition on its position. A preview
+   that eases towards the finger is a preview of where the finger was. */
+.scrub__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--paper-sunk);
+  /* Reserved before the thumbnail arrives, so the tile does not change height
+     under the pointer when it does. US Letter; corrected on load. */
+  aspect-ratio: 1 / 1.294;
+  object-fit: contain;
+}
+
+.scrub__img[hidden] { display: none; }
+
+.scrub__meta {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: var(--step--1);
+  line-height: 1.35;
+  color: var(--ink);
+  text-align: center;
+}
+
+.scrub__state { display: block; color: var(--ink-muted); }
+.scrub__state:empty { display: none; }
+.scrub__state.is-dark { color: var(--unreadable); }
+
+/* --------------------------------------------------------------------------
+   The passage affordance
+   --------------------------------------------------------------------------
+   Anchored to the selection, never over it, and outside .text-layer in the
+   DOM - the element carrying data-pagefind-body holds the page's tokens and
+   nothing else, and one inserted <div> would move every search hit in the
+   archive by however many words it contains.
+   -------------------------------------------------------------------------- */
+
+.passage {
+  position: absolute;
+  z-index: 55;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--edge);
+  box-shadow: 0 2px 10px rgb(28 26 23 / 0.16);
+  opacity: 0;
+  translate: 0 3px;
+  transition: opacity var(--out) var(--ease), translate var(--out) var(--ease);
+}
+
+.passage.is-open {
+  opacity: 1;
+  translate: 0 0;
+  transition-duration: var(--in);
+}
+
+.passage[hidden] { display: none; }
+
+/* On its way out it is not a control any more. Without this a click landing
+   during the 180ms fade hits a button belonging to a selection that has
+   already gone. */
+.passage:not(.is-open) { pointer-events: none; }
+
+.passage button {
+  font: inherit;
+  font-size: var(--step--1);
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 0.35rem 0.6rem;
+  min-height: 2.2rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--out) var(--ease);
+}
+
+.passage button:hover {
+  background: var(--accent-quiet);
+  transition-duration: var(--in);
+}
+
+.passage button.is-done { color: var(--ink-muted); }
+
+.passage__sep {
+  width: 1px;
+  align-self: stretch;
+  margin-block: 0.25rem;
+  background: var(--rule);
+}
+
+/* The last resort. Clipboard access can be refused outright - a mirror served
+   over plain http, or opened from a USB stick as file://, has no clipboard at
+   all - and the honest answer to that is the URL itself, selected, in a field
+   the reader can copy out of by hand. */
+.passage__field {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  width: min(22rem, 60vw);
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--edge);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+   Page turns
+   --------------------------------------------------------------------------
+   The reader is moving through one physical object, and the movement between
+   two of its pages should say which way through it they are going. Forward
+   sends the scan left and brings the next one in from the right; back does the
+   opposite. Direction follows page order, not history order, so the back
+   button and the "previous page" link agree with each other - which is what a
+   reader means by "back" when they are holding a document.
+
+   Cross-document, so there is no client-side router and no interception of the
+   link: the browser navigates, the two documents hand snapshots to each other.
+   Where the API is missing the whole block is inert and the navigation is an
+   ordinary one.
+   -------------------------------------------------------------------------- */
+
+@view-transition { navigation: auto; }
+
+/* This turns every same-origin navigation in the archive into a transition,
+   not only the ones between two pages of a document, and that is on purpose.
+   The browser's own default for the rest is a cross-fade of the whole page,
+   which is not movement and does not claim anything about the two documents
+   beyond "you are still in the same place" - which is true, and is what the
+   white flash it replaces was failing to say. Only the scan is given a
+   direction, and only when the direction means something. */
+
+/* The scan is the element that carries it. Nothing else is named, so
+   everything else cross-fades as one root snapshot underneath. */
+.scan__figure { view-transition-name: scan; }
+
+/* Two elements may not hold one name at the same time. While the lens is open
+   the name belongs to the lens, which is what makes the scan appear to grow
+   out of its place on the page rather than be replaced by a dialog. */
+html.is-lensed .scan__figure { view-transition-name: none; }
+html.is-lensed .lens__canvas { view-transition-name: scan; }
+
+/* Clipped to its own frame, so the outgoing page slides behind the edge of the
+   mount instead of travelling across the interface. */
+::view-transition-image-pair(scan) { overflow: clip; }
+
+::view-transition-old(scan),
+::view-transition-new(scan) {
+  /* The default is a cross-fade of both at once; each side gets its own
+     timing below and neither should also be doing the browser's. */
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html[data-turn="forward"]::view-transition-old(scan) {
+  animation: turn-out-left var(--turn-out) var(--ease) both;
+}
+html[data-turn="forward"]::view-transition-new(scan) {
+  animation: turn-in-right var(--turn-in) var(--ease) both;
+}
+html[data-turn="back"]::view-transition-old(scan) {
+  animation: turn-out-right var(--turn-out) var(--ease) both;
+}
+html[data-turn="back"]::view-transition-new(scan) {
+  animation: turn-in-left var(--turn-in) var(--ease) both;
+}
+
+/* Where view-transition-types are supported the attribute is redundant, but
+   both are set: an attribute on <html> is captured in the outgoing snapshot
+   and works in the first browsers to ship the cross-document half. */
+:root:active-view-transition-type(forward)::view-transition-old(scan) {
+  animation: turn-out-left var(--turn-out) var(--ease) both;
+}
+:root:active-view-transition-type(forward)::view-transition-new(scan) {
+  animation: turn-in-right var(--turn-in) var(--ease) both;
+}
+:root:active-view-transition-type(back)::view-transition-old(scan) {
+  animation: turn-out-right var(--turn-out) var(--ease) both;
+}
+:root:active-view-transition-type(back)::view-transition-new(scan) {
+  animation: turn-in-left var(--turn-in) var(--ease) both;
+}
+
+/* 6% of the width, not 100%. A full-width slide is a slideshow; this is a
+   sheet being taken off a stack, and the eye only needs the direction. */
+@keyframes turn-out-left {
+  to { opacity: 0; transform: translateX(-6%); }
+}
+@keyframes turn-in-right {
+  from { opacity: 0; transform: translateX(6%); }
+}
+@keyframes turn-out-right {
+  to { opacity: 0; transform: translateX(6%); }
+}
+@keyframes turn-in-left {
+  from { opacity: 0; transform: translateX(-6%); }
+}
+
+/* --------------------------------------------------------------------------
+   A found word, arriving
+   --------------------------------------------------------------------------
+   The base stylesheet gives the box drawn on the scan an entrance and gives
+   the word in the transcription none, so following a second hit on the same
+   page - the hash changes, viewer.js clears the marks and sets new ones -
+   made half of the pair appear and the other half cut. Both fade now. It is
+   the same 180ms as everything else that arrives, and the reduced-motion rule
+   at the top of the base stylesheet flattens it with the rest.
+   -------------------------------------------------------------------------- */
+
+.text-layer .w {
+  transition: background-color var(--out) var(--ease),
+              box-shadow var(--out) var(--ease),
+              color var(--out) var(--ease);
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   --------------------------------------------------------------------------
+   The base stylesheet already flattens every transition and animation on a
+   real element. Neither `*` nor that rule reaches a ::view-transition
+   pseudo-element, and a transition that has been asked not to move should not
+   be started at all - so the navigation loses its transition entirely and
+   becomes what it was before: instant.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  .scrub, .passage { transition: none; }
+}
+
+/* --------------------------------------------------------------------------
+   More contrast, and forced colours
+   -------------------------------------------------------------------------- */
+
+@media (prefers-contrast: more) {
+  :root {
+    --lens-ink-muted: var(--lens-ink);
+    --lens-edge: var(--lens-ink);
+  }
+  .scrub__state { color: var(--ink); }
+}
+
+@media (forced-colors: active) {
+  /* The lens ground is not a theme colour and must not survive a reader's own
+     palette. Everything in here becomes their two colours; the scan itself is
+     an image and is left alone, which is the point of the room. */
+  .lens { background: Canvas; color: CanvasText; }
+  .lens__bar { background: Canvas; border-top-color: CanvasText; }
+  .lens__where, .lens__level { color: CanvasText; }
+  .lens button, .lens a.lens__step { border-color: CanvasText; color: CanvasText; }
+  .lens button:hover, .lens a.lens__step:hover { background: Highlight; color: HighlightText; }
+  .lens button[disabled] { color: GrayText; border-color: GrayText; }
+  .scrub, .passage { background: Canvas; border-color: CanvasText; box-shadow: none; }
+  .scrub__meta { color: CanvasText; }
+  .scrub__state { color: GrayText; }
+  .scrub__state.is-dark { color: LinkText; }
+  .passage button { color: CanvasText; }
+  .passage button:hover { background: Highlight; color: HighlightText; }
+  .passage__sep { background: CanvasText; }
+}
+
+@media print {
+  /* Neither is part of the document, and one of them is a modal dialog, which
+     `display: none` on its own does not close. */
+  .lens, .lens::backdrop, .scrub, .passage { display: none !important; }
+  .scan__open { display: none; }
+}

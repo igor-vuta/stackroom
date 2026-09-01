@@ -1,0 +1,139 @@
+/* --------------------------------------------------------------------------
+   The command palette
+   --------------------------------------------------------------------------
+   A sheet of paper that arrives over the archive, holding a list of places in
+   it. It is furniture, so it is built out of the same three things everything
+   else here is built out of: a hairline edge, the raised paper, and one accent
+   for the row you are on. No shadow, no corner radius, no animation - it is
+   either there or it is not, which is also how it feels to use.
+   -------------------------------------------------------------------------- */
+
+/* The page behind a modal dialog still scrolls in every browser that has one.
+   scrollbar-gutter reserves the space the scrollbar was using, so locking the
+   page does not shift it sideways by fifteen pixels as the palette opens. */
+html.is-modal {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+.pal {
+  /* A dialog is centred by default. A palette belongs near the top, where the
+     reader's eye already is and where a growing list does not push itself
+     around the screen. */
+  margin: 12vh auto auto;
+  width: min(38rem, calc(100vw - 2rem));
+  max-width: none;
+  padding: 0;
+  border: 1px solid var(--edge);
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+.pal::backdrop { background: rgb(28 26 23 / 0.45); }
+
+.pal__input {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: var(--step-1);
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  padding: 0.75rem 0.9rem;
+}
+
+/* The field is the whole top of the sheet and the sheet has an edge already;
+   a ring drawn inside it would be a second border around the same thing. */
+.pal__input:focus { outline: none; border-bottom-color: var(--accent); }
+.pal__input::placeholder { color: var(--ink-faint); opacity: 1; }
+
+.pal__list {
+  max-height: min(50vh, 22rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;   /* the archive must not scroll when this ends */
+}
+
+.pal__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.25rem;
+  padding: 0.45rem 0.9rem;
+  text-decoration: none;
+  color: var(--ink);
+  border-left: 2px solid transparent;
+}
+
+.pal__name { min-width: 0; }
+
+.pal__sub {
+  color: var(--ink-muted);
+  font-size: var(--step--1);
+  text-align: right;
+  flex: 0 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The row you are on. Not colour alone - the accent bar down its left edge is
+   the part that survives a monochrome screen, forced colours, and 1.4.1. */
+.pal__row[aria-selected="true"] {
+  background: var(--accent-quiet);
+  border-left-color: var(--accent);
+}
+
+.pal__row:hover { background: var(--paper-sunk); }
+
+/* Why this row matched, in the archive's own language for a found word: the
+   same wash and the same underline a search hit gets on a scanned page. */
+.pal__row mark {
+  background: var(--highlight);
+  color: var(--highlight-ink);
+  box-shadow: 0 1px 0 var(--highlight-edge);
+  border-radius: 1px;
+}
+
+.pal__note,
+.pal__keys {
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+}
+
+/* The line that says nothing matched sits above the keys and is empty most of
+   the time. It keeps no height when empty, so the sheet does not carry a blank
+   band around with it. */
+.pal__note:empty { display: none; }
+
+.pal__keys {
+  border-top: 1px solid var(--rule);
+  color: var(--ink-faint);
+}
+
+.pal__keys kbd { margin-right: 0.15em; }
+
+@media (max-width: 34rem) {
+  .pal { margin-top: 4vh; }
+  /* Two lines rather than one squeezed one: on a phone the subtitle is where
+     "page 4 of the memo" versus "page 4 of the annexes" is settled. */
+  .pal__row { display: block; }
+  .pal__sub { text-align: left; display: block; }
+}
+
+@media (forced-colors: active) {
+  .pal { border-color: CanvasText; }
+  .pal__row[aria-selected="true"] {
+    background: Highlight;
+    color: HighlightText;
+    border-left-color: HighlightText;
+  }
+  .pal__row mark { background: Highlight; color: HighlightText; box-shadow: none; }
+}
+
+@media print {
+  /* `display: none` loses to a dialog's open state; this does not. */
+  .pal, .pal::backdrop { display: none !important; }
+}

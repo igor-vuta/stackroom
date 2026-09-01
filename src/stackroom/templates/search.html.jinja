@@ -1,0 +1,36 @@
+{% extends "base.html.jinja" %}
+{% block title %}{{ t('title.join', page=t('search.heading'), site=collection.title) }}{% endblock %}
+{% block main %}
+<div class="wrap wrap--narrow">
+
+  <h1 class="page-title">{{ t('search.heading') }}</h1>
+
+  <div class="search-field">
+    <label class="visually-hidden" for="q">{{ t('search.label') }}</label>
+    <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+           placeholder="{{ t('search.placeholder') }}" enterkeyhint="search">
+  </div>
+
+  <p class="search-status" id="status" role="status" aria-live="polite"></p>
+
+  {#- The caveat qualifies the number directly above it, so it sits directly
+      below it. It used to be under the results, where a reader who took the
+      count at face value had already stopped reading. -#}
+  <div class="notice" id="caveats" hidden>
+    <p id="caveat-text"></p>
+  </div>
+
+  <ul class="results" id="results"></ul>
+
+  <noscript>
+    {%- set browse_link %}<a href="{{ root }}browse/index.html">{{ t('search.noscript_link') }}</a>{% endset %}
+    <p class="empty">{{ t('search.noscript_html', count=collection.stats.pages, link=browse_link) }}</p>
+  </noscript>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="application/json" id="search-config">{{ search_config }}</script>
+<script src="{{ root }}assets/search.js" defer></script>
+{% endblock %}

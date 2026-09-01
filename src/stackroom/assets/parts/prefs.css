@@ -1,0 +1,290 @@
+/* --------------------------------------------------------------------------
+   Reading settings, citation, and where you were
+   --------------------------------------------------------------------------
+   Everything the reader operates that is not the palette. All of it is drawn
+   from the same tokens as the rest of the archive and none of it is visible
+   until the reader asks for it, because a document is the point and an
+   interface around one should be mostly absent.
+   -------------------------------------------------------------------------- */
+
+/* --------------------------------------------------------------------------
+   A theme the reader chose
+   --------------------------------------------------------------------------
+   Nothing left to do here, and that is the point.
+
+   stackroom.css used to state the dark palette only inside
+   `@media (prefers-color-scheme: dark)`, which left `data-theme="dark"` with
+   nothing to do on a light system - the exact case a reader creates by
+   choosing Dark - so all seventeen colours were restated in this file for that
+   one selector, under a note saying this was the wrong place for them.
+
+   The base now writes each token once as `var(--if-light, A) var(--if-dark, B)`
+   and flips `--if-light` / `--if-dark` from the media query *and* from
+   `:root[data-theme="dark"]` / `:root[data-theme="light"]`. A chosen theme and
+   a system theme read the same palette, `color-scheme` and the `.scan__img`
+   dim included, so the copy that lived here is deleted rather than kept in
+   step by hand.
+
+   One rule went with it that was not merely redundant:
+
+       :root[data-theme="dark"] .hit { mix-blend-mode: screen; }
+
+   The scan is dimmed for a dark reader and never inverted, so the ground under
+   a highlight is a photocopy: white, in every theme. `screen` on white washes
+   the fill and its outline out to white together, leaving hue as the only
+   thing separating a found word from an unfound one - the SC 1.4.1 failure the
+   base's --highlight-edge note exists to prevent. Being more specific than
+   `.hit--void`, it also beat that rule's `normal` and screened the dashed
+   redaction frames. The base deleted its own equivalent for those reasons;
+   this copy survived the fix and went on serving the broken version to exactly
+   the readers who had asked for dark. `multiply` is right in both themes and
+   there is nothing for this file to add.
+   -------------------------------------------------------------------------- */
+
+/* --------------------------------------------------------------------------
+   Controls in the masthead
+   -------------------------------------------------------------------------- */
+
+/* One addition to a component this file does not own, forced by putting
+   controls into it: `position` gives the settings panel something to hang off.
+   Nothing else in the masthead is positioned, so it only adds an anchor - and
+   it stays, because the base does not set it. The anchor is this file's
+   requirement, not the masthead's.
+
+   `flex-wrap: wrap` used to sit beside it, for the 380px overflow the extra
+   controls caused. The base now wraps the nav itself and records the same
+   measurement in its own comment, so a second copy here could only ever be the
+   one that drifts. */
+.masthead__nav { position: relative; }
+
+/* Two small keycaps at the end of the sections: one is labelled with the key
+   that opens the palette, the other with two letters that have meant type size
+   since the first e-reader. They are bordered because they are operated -
+   --edge is the token for the boundary of a thing you press - and the four
+   section links beside them are not. */
+.mh-btn {
+  font: inherit;
+  font-size: var(--step--1);
+  line-height: 1.35;
+  color: var(--ink-muted);
+  background: var(--paper-raised);
+  border: 1px solid var(--edge);
+  padding: 0.1em 0.4em;
+  cursor: pointer;
+}
+
+.mh-btn:hover { color: var(--ink); border-color: var(--ink-faint); }
+.mh-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--accent); }
+
+/* Back to the top. A working link with no script and no scroll timeline, which
+   is why it is in the markup rather than built here; where the browser can
+   drive an animation from the scroll position, it stays out of the way until
+   the reader has scrolled past the fold. No listener, no rAF, no JavaScript at
+   all - and under reduced motion it simply stays where it is, visible, because
+   a control that cannot be reached is worse than one always in view.
+
+   The range is measured in screens of scrolling, not in percent of the page:
+   a fifth of a forty-page document is a very long way down, and a fifth of the
+   front page is nothing. Two thirds of a screen is where the top has gone and
+   getting back to it has become a journey. It has to be reachable on a page
+   that only scrolls twice - which most page views do - so the range ends well
+   inside that. */
+.to-top {
+  text-decoration: none;
+  color: var(--ink-muted);
+  padding-block: 0.25rem;
+  white-space: nowrap;
+}
+
+.to-top:hover { color: var(--ink); }
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .js .to-top {
+      animation: to-top-in linear both;
+      animation-timeline: scroll(root);
+      animation-range: 40vh 70vh;
+    }
+    /* visibility flips rather than fades, so the link is never a target the
+       keyboard can reach while it is invisible. */
+    @keyframes to-top-in {
+      from { opacity: 0; visibility: hidden; }
+      to { opacity: 1; visibility: visible; }
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   The settings panel
+   -------------------------------------------------------------------------- */
+
+.pref {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: min(16rem, calc(100vw - 2rem));
+  padding: var(--space-2);
+  border: 1px solid var(--edge);
+  background: var(--paper-raised);
+  text-align: left;
+  font-size: var(--step--1);
+}
+
+.pref__set {
+  border: 0;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.8rem;
+}
+
+.pref__set legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  color: var(--ink-muted);
+}
+
+/* The label is the target, the radio sits inside it, and the whole pair is one
+   click. The accent is the browser's own, which is the one control on this
+   page whose colour is worth borrowing. */
+.opt {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.pref__note {
+  margin: 0;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons that behave like links
+   --------------------------------------------------------------------------
+   Cite, copy and forget sit in a line of metadata beside "Download the
+   original", which is an anchor. They are buttons, because they do not go
+   anywhere, and they are drawn as the anchor is, because the reader is
+   entitled to see one row of things they can do rather than two.
+   -------------------------------------------------------------------------- */
+
+.cite__open,
+.cite__link,
+.cite__copy,
+.pref__forget,
+.resume__forget {
+  font: inherit;
+  color: var(--ink-muted);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--edge);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+.cite__open:hover,
+.cite__link:hover,
+.cite__copy:hover,
+.pref__forget:hover,
+.resume__forget:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+/* --------------------------------------------------------------------------
+   Citation
+   -------------------------------------------------------------------------- */
+
+.cite {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2);
+  border: 1px solid var(--rule);
+  max-width: 44rem;
+  font-size: var(--step--1);
+}
+
+.cite__formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.9rem;
+  margin-bottom: var(--space-1);
+}
+
+/* A citation is a string that has to survive being pasted, so it is shown as
+   the string it is: monospaced, wrapping, selectable, and never restyled into
+   something prettier than what lands in the clipboard. */
+.cite__text {
+  display: block;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--edge);
+  padding: 0.5rem 0.6rem;
+  resize: vertical;
+}
+
+.cite__foot {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+/* Empty until something has been copied or refused; while it waits it must not
+   sit in the metadata line as an invisible item with a gap either side. */
+.cite__said:empty { display: none; }
+.cite__said { color: var(--ink-muted); }
+
+/* --------------------------------------------------------------------------
+   Where you were
+   -------------------------------------------------------------------------- */
+
+/* The accent spine marks this as the archive talking about the reader rather
+   than about the documents - the only place in the design that does. */
+.resume {
+  margin: var(--space-3) 0 0;
+  padding: 0.15rem 0 0.15rem 0.9rem;
+  border-left: 2px solid var(--accent);
+  color: var(--ink-muted);
+  max-width: var(--measure);
+}
+
+.resume a { color: var(--ink); }
+
+/* --------------------------------------------------------------------------
+   Numbers that are one thing
+   --------------------------------------------------------------------------
+   A digest is not eight words and a control number is not two. Double-clicking
+   either used to take whatever fragment was under the pointer; a single click
+   now takes all of it, which is the only thing anybody has ever wanted to do
+   with a checksum.
+   -------------------------------------------------------------------------- */
+
+.colophon .mono,
+.doc__meta > .mono {
+  user-select: all;
+}
+
+@media (forced-colors: active) {
+  .mh-btn { border-color: ButtonText; color: ButtonText; }
+  .pref, .cite, .cite__text { border-color: CanvasText; }
+  .resume { border-left-color: LinkText; }
+}
+
+@media print {
+  .mh-btn, .pref, .to-top, .cite, .cite__open, .cite__link, .cite__said, .resume {
+    display: none;
+  }
+}

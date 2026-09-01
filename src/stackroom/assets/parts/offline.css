@@ -1,0 +1,100 @@
+/* --------------------------------------------------------------------------
+   Offline
+   --------------------------------------------------------------------------
+   One line in the colophon saying whether this archive is on the reader's own
+   device, and two controls for changing that. It sits with the build stamp
+   and the checksum because it belongs to the same idea: here is exactly what
+   you have, and here is what you can keep.
+
+   It is deliberately the quietest thing on the page. An archive that shouts
+   "INSTALL THIS APP" has misunderstood what it is. The line only appears once
+   JavaScript has found out what is true, so nothing flickers and nothing
+   promises something the browser cannot do.
+
+   Like every part file, this only adds. It introduces no new colour, no new
+   type size and no new spacing value - all four are tokens from the base.
+   -------------------------------------------------------------------------- */
+
+.offline {
+  margin-top: var(--space-2);
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--rule);
+  max-width: 42rem;              /* the measure the colophon's own text uses */
+}
+
+.offline__say {
+  margin: 0;
+  color: var(--ink-faint);
+}
+
+.offline__do {
+  margin: 0.45rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.offline__do:empty { display: none; }
+
+/* A button, not a link: it does something to this device rather than going
+   somewhere. Sized and coloured as text with an edge, because at the bottom
+   of the page under the checksum a filled button would be the loudest thing
+   in the archive. */
+.offline__btn {
+  font: inherit;
+  font-family: var(--font-sans);
+  color: var(--ink-muted);
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: 2px;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  transition: color var(--in) var(--ease), border-color var(--in) var(--ease);
+}
+
+.offline__btn:hover {
+  color: var(--ink);
+  border-color: var(--ink-muted);
+}
+
+/* The one that costs the reader disk and data is the one that says so; it is
+   still not filled, only darker than the one beside it. */
+.offline__btn--go { color: var(--ink); }
+.offline__btn--quiet { border-color: var(--rule-strong); }
+
+.offline__bar {
+  display: block;
+  flex: 1 1 8rem;
+  max-width: 14rem;
+  height: 3px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.offline__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width var(--out) var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offline__btn,
+  .offline__fill { transition: none; }
+}
+
+/* In forced-colours mode the browser throws the palette away, so the edge and
+   the bar have to be named in system colours or they vanish. */
+@media (forced-colors: active) {
+  .offline__btn { border-color: ButtonText; color: ButtonText; }
+  .offline__bar { border: 1px solid CanvasText; }
+  .offline__fill { background: Highlight; }
+}
+
+/* Nothing here belongs on paper: it describes the state of a browser, not the
+   documents. The colophon's build stamp and checksum still print. */
+@media print {
+  .offline { display: none; }
+}

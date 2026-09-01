@@ -1,0 +1,194 @@
+{% extends "base.html.jinja" %}
+{#-
+  One page of one document.
+
+  This file carries the archive's central promise: it is a real HTML document
+  containing this page's text, readable and citable with no JavaScript, no
+  search index and no network beyond the one request that fetched it. Search is
+  an accelerant on top of this; it is never a prerequisite for reading.
+
+  It is also the only file the search index reads. The element carrying
+  `data-pagefind-body` must contain the page's tokens and nothing else, each in
+  its own span, separated by real whitespace - the index splits on whitespace
+  and reports matches as positions in that list, and the boxes drawn on the
+  scan are looked up by the same position.
+-#}
+{% block title %}{{ t('title.page_join', page=t('page.n', number=page.number), document=doc.title, site=collection.title) }}{% endblock %}
+{% block head %}
+<link rel="canonical" href="{{ canonical }}">
+{#- `scan.js` used to be asked for here, in the head, because the direction of a
+    page turn has to be on <html> before the browser's first rendering
+    opportunity and a deferred script is too late for it. The shell now does
+    that from `HEAD_SCRIPTS` in build/site.py, which names this template as the
+    one that wants it - so the file is fetched once instead of twice, and no
+    other template pays for it. -#}
+{%- if prev_url %}<link rel="prev" href="{{ prev_url }}">{% endif %}
+{%- if next_url %}<link rel="next" href="{{ next_url }}">{% endif %}
+{%- if original_url %}<link rel="alternate" type="application/pdf" href="{{ original_url }}">{% endif %}
+{% endblock %}
+
+{% block main %}
+<div class="wrap">
+
+  <nav class="crumbs" aria-label="{{ t('nav.breadcrumb') }}">
+    <p class="doc__meta">
+      <a href="{{ root }}browse/index.html">{{ t('nav.documents') }}</a>
+      <span class="sep" aria-hidden="true">/</span>
+      <a href="{{ doc_url }}">{{ doc.title }}</a>
+    </p>
+  </nav>
+
+  <h1 class="page-title page-title--tight">{{ t('page.heading_html', number=page.number, total=doc.page_count) }}</h1>
+
+  <p class="doc__meta">
+    {#- `.bates` names it. `.mono` is how it is set; something looking for the
+        control number should not have to know that, or that it happens to be
+        the first monospaced thing in this paragraph. -#}
+    {%- if page.bates %}<span class="mono bates">{{ page.bates }}</span>{% endif %}
+    {#- One sentence per case rather than a stem with a clause bolted on: the
+        share and the count sit in different places in different languages, and
+        a comma-joined fragment cannot be moved. -#}
+    {%- if page.redactions %}<span>{% if page.redaction_ratio > 0.005 %}{{ t('page.redactions_with_share', count=page.redactions|length, percent=pct((page.redaction_ratio * 100)|round|int)) }}{% else %}{{ t('page.redactions', count=page.redactions|length) }}{% endif %}</span>{% endif %}
+    {%- if original_url %}<a href="{{ original_url }}" download>{{ t('doc.download') }}</a>{% endif %}
+  </p>
+
+  {#- The page's own facts, written once for the enhancements that need them:
+      the full-size view names itself with them, and the passage affordance
+      builds a citation out of them. They are attributes on the wrapper rather
+      than text anywhere, because everything a reader should see is already
+      printed above and repeating it in the markup is how the two get to
+      disagree. Nothing here goes inside the element carrying
+      data-pagefind-body, which holds this page's tokens and nothing else. -#}
+  <div class="page-view"
+       data-collection="{{ collection.title }}"
+       data-doc="{{ doc.title }}"
+       data-page="{{ page.number }}"
+       data-pages="{{ doc.page_count }}"
+       {%- if page.bates %} data-bates="{{ page.bates }}"{% endif %}>
+
+    <div class="scan">
+      <div class="scan__mount">
+        {#- The placeholder is a background the real scan paints over: a 24 px
+            picture of the page, inline, so the frame holds something while the
+            image is still on the wire. It is deliberately *not* an opacity
+            transition on the <img>: an element at opacity 0 is not an LCP
+            candidate, so that recipe improves the metric by lying, and with
+            scripting off the scan would never become visible at all. Nothing
+            here is hidden and nothing here needs a script. A page with no
+            placeholder gets exactly the style it got before. -#}
+        <figure class="scan__figure" id="scan"
+                style="{% if page.placeholder %}background-image:url({{ page.placeholder }});background-size:cover;background-position:top center;background-repeat:no-repeat;{% endif %}aspect-ratio: {{ page.image_width or 1000 }} / {{ page.image_height or 1294 }}">
+          {%- if page.images %}
+          <picture>
+            {%- for fmt in page.formats %}
+            <source type="image/{{ fmt }}" srcset="{% for v in page.variants(fmt) %}{{ root }}{{ v.path }} {{ v.width }}w{{ ', ' if not loop.last }}{% endfor %}" sizes="(max-width: 60rem) 92vw, 45vw">
+            {%- endfor %}
+            <img class="scan__img" src="{{ root }}{{ page.fallback.path }}"
+                 width="{{ page.image_width }}" height="{{ page.image_height }}"
+                 {% if page.number == 1 %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                 decoding="async" alt="">
+          </picture>
+          {%- else %}
+          <p class="empty empty--boxed">{{ t('page.no_image') }}</p>
+          {%- endif %}
+          {#- Redaction boxes are drawn from the data rather than trusted to the
+              scan, so they can be labelled, counted and reached by keyboard. -#}
+          <div class="scan__overlay" id="overlay" aria-hidden="true">
+            {%- for r in page.redactions %}
+            {#- The codes ride along on the box so the full-size view can say
+                which law is being cited for the hole the reader is looking at.
+                They are already spelled out in full in the notice below the
+                transcription; this is the same fact, attached to the shape. -#}
+            <span class="hit hit--void"{% if r.codes %} data-codes="{{ r.codes|join(' ') }}"{% endif %} style="left:{{ (r.box.x*100)|round(3) }}%;top:{{ (r.box.y*100)|round(3) }}%;width:{{ (r.box.w*100)|round(3) }}%;height:{{ (r.box.h*100)|round(3) }}%"></span>
+            {%- endfor %}
+          </div>
+        </figure>
+      </div>
+      {#- Only when we measured something. A page that never rendered and
+          carries no text layer has neither a raster nor a media box, and the
+          model's 612 x 792 default would be printed here as though it were a
+          fact about the page - so the caption goes altogether rather than
+          leaving an empty line under an empty frame. -#}
+      {%- if page.images or page.words %}
+      <p class="scan__caption">
+        <span>{{ t('page.dimensions', width=page.width_pt|round|int, height=page.height_pt|round|int) }}</span>
+        {%- if page.source.value in ('ocr', 'ocr-override') %}<span>{{ t('page.source_ocr') }}</span>
+        {%- elif page.source.value == 'embedded' %}<span>{{ t('page.source_embedded') }}</span>{% endif %}
+      </p>
+      {%- endif %}
+    </div>
+
+    {#- The document's own language and direction, marked on the one block that
+        is in it. `<html lang>` names the interface language because the rest of
+        this page is written in it, so a Russian archive of English documents
+        declares both, in the right places, instead of one of them twice.
+
+        The interface notices inside this block re-declare the interface
+        language for the same reason. The transcription itself is left
+        untouched: the element carrying `data-pagefind-body` is byte-identical
+        to what it was, because the search index's word positions are the
+        boxes drawn on the scan. -#}
+    <div class="page-text"{% if page_lang %} lang="{{ page_lang }}" dir="{{ text_direction(page_lang) }}"{% endif %}>
+      {%- if quality_note %}
+      <div class="notice notice--warn" lang="{{ ui_lang }}" dir="{{ ui_dir }}">
+        <p><strong>{{ quality_note.heading }}</strong></p>
+        <p>{{ quality_note.body }}</p>
+      </div>
+      {%- endif %}
+
+      {%- if display_lines %}
+      <div class="text-layer" data-pagefind-body>
+        {%- for line in display_lines %}
+        <span class="ln">
+          {%- for item in line -%}
+          {%- if item.kind == 'word' %}<span class="w{% if item.doubtful %} is-doubtful{% endif %}" data-i="{{ item.index }}">{{ item.text }}</span> {% else %}<span class="withheld" style="width:{{ item.width }}%"{% if item.code %} data-code="{{ item.code }}"{% endif %} role="img" aria-label="withheld{% if item.code %}, {{ item.code_label }}{% endif %}"></span> {% endif %}
+          {%- endfor -%}
+        </span>
+        {%- endfor %}
+      </div>
+      {%- else %}
+      <p class="empty" lang="{{ ui_lang }}" dir="{{ ui_dir }}">{{ empty_text }}</p>
+      {%- endif %}
+
+      {%- if page.exemptions %}
+      <div class="notice" lang="{{ ui_lang }}" dir="{{ ui_dir }}">
+        <p>{{ t('page.withheld_under') }}</p>
+        <ul class="notice__codes">
+          {%- for code, label in exemption_legend %}
+          <li><span class="mono mono--code">{{ code }}</span> — {{ label }}</li>
+          {%- endfor %}
+        </ul>
+      </div>
+      {%- endif %}
+    </div>
+  </div>
+
+  {#- The map. A reader seven pages into two hundred has two links and no idea
+      where they are in the document or what is left of it; this is the strip
+      the document page already carries, marked with where they are. It sits
+      immediately above the pager because that is the furniture for moving
+      through the document, and the two are one object: the strip says where,
+      the pager goes there. -#}
+  <figure class="ribbon-figure ribbon-figure--pager">
+    {#- The strip is a picture of the caption. One of them speaks. -#}
+    <div aria-hidden="true">{{ ribbon }}</div>
+    <figcaption class="visually-hidden">{{ ribbon_label }}</figcaption>
+  </figure>
+
+  {#- The arrows are inside the messages, not around them: in a right-to-left
+      interface "previous" points the other way, and that is a decision only the
+      translator can make. The pager's own left/right order is the browser's
+      job, from `dir` on <html>. -#}
+  <nav class="pager" aria-label="{{ t('page.pager_label') }}">
+    {%- if prev_url %}<a href="{{ prev_url }}" rel="prev" id="prev-page">{{ t('page.prev', number=page.number - 1) }}</a>{% else %}<span></span>{% endif %}
+    <span class="pager__where">{{ t('page.where', title=doc.title, number=page.number, total=doc.page_count) }}</span>
+    {%- if next_url %}<a href="{{ next_url }}" rel="next" id="next-page">{{ t('page.next', number=page.number + 1) }}</a>{% else %}<span></span>{% endif %}
+  </nav>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}assets/viewer.js" defer></script>
+<script type="application/json" id="page-data">{{ page_data }}</script>
+{% endblock %}

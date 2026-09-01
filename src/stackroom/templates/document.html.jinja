@@ -1,0 +1,65 @@
+{% extends "base.html.jinja" %}
+{% block title %}{{ t('title.join', page=doc.title, site=collection.title) }}{% endblock %}
+{% block main %}
+<div class="wrap">
+
+  <nav class="crumbs" aria-label="{{ t('nav.breadcrumb') }}">
+    <p class="doc__meta"><a href="{{ root }}browse/index.html">{{ t('nav.documents') }}</a></p>
+  </nav>
+  <h1 class="page-title page-title--tight">{{ doc.title }}</h1>
+
+  <p class="doc__meta">
+    <span>{{ t('count.pages', count=doc.page_count) }}</span>
+    {%- if doc.bates_prefix %}<span class="sep" aria-hidden="true">·</span><span>{{ t('doc.numbered_html', prefix=doc.bates_prefix) }}</span>{% endif %}
+    <span class="sep" aria-hidden="true">·</span><span class="num">{{ size_human }}</span>
+    {%- if original_url %}<a href="{{ original_url }}" download>{{ t('doc.download') }}</a>{% endif %}
+  </p>
+
+  {%- if doc.notes %}<div class="prose doc__notes">{{ doc.notes }}</div>{% endif %}
+
+  <figure class="ribbon-figure">
+    {#- The strip is a picture of the caption. One of them speaks. -#}
+    <div aria-hidden="true">{{ ribbon }}</div>
+    <figcaption class="visually-hidden">{{ ribbon_label }}</figcaption>
+  </figure>
+
+  {%- if doc.bates_gaps %}
+  <div class="notice notice--warn">
+    {#- The list of ranges is markup, so it is built here and handed to the
+        sentence as one parameter. The sentence stays whole, which is what lets
+        a translator put the list wherever their language puts it. -#}
+    {%- set ranges %}{% for a, b in doc.bates_gaps %}<span class="mono">{{ a }}</span>{% if a != b %}–<span class="mono">{{ b }}</span>{% endif %}{{ ', ' if not loop.last }}{% endfor %}{% endset %}
+    <p><strong>{{ t('doc.gaps_heading', count=doc.bates_gaps|length) }}</strong></p>
+    <p>{{ t('doc.gaps_body_html', ranges=ranges) }}</p>
+  </div>
+  {%- endif %}
+
+  {%- if doc.unreadable_pages %}
+  <div class="notice notice--warn">
+    <p><strong>{{ t('doc.unreadable_heading', count=doc.unreadable_pages) }}</strong></p>
+    <p>{{ t('doc.unreadable_body') }}</p>
+  </div>
+  {%- endif %}
+
+  <h2 class="section-title">{{ t('doc.pages_heading') }}</h2>
+  <ol class="thumbs">
+    {%- for item in pages %}
+    <li>
+      <a href="{{ item.url }}">
+        {#- The aspect ratio is the only per-page number here: these are real
+            pages and some of them are not the shape of the others. -#}
+        {%- if item.thumb %}
+        <img class="doc__thumb thumbs__img" style="aspect-ratio:{{ item.aspect }}" src="{{ root }}{{ item.thumb }}" loading="lazy" decoding="async" alt="">
+        {%- else %}<span class="doc__thumb thumbs__img" style="aspect-ratio:{{ item.aspect }}"></span>{% endif %}
+        <span class="doc__meta thumbs__meta">
+          <span class="num">{{ t('page.n', number=item.page.number) }}</span>
+          {%- if item.page.bates %}<br><span class="mono mono--fit">{{ item.page.bates }}</span>{% endif %}
+          {%- if item.page.redactions %}<br><span>{{ t('doc.thumb_withheld', count=item.page.redactions|length) }}</span>{% endif %}
+        </span>
+      </a>
+    </li>
+    {%- endfor %}
+  </ol>
+
+</div>
+{% endblock %}
