@@ -1,0 +1,187 @@
+{% extends "base.html.jinja" %}
+{#-
+  The negative.
+
+  The archive's other pages show what survived. This one draws what did not:
+  every redaction in the release, at the size it took up and in the place it
+  was taken from, and nothing else on the page at all.
+
+  The picture is built in Python and arrives as inline SVG, so it is correct
+  before any script runs. The arrangements are radio buttons and sibling
+  selectors rather than JavaScript, for the same reason: a reader with scripts
+  off still gets to regroup the field, which is where the finding is.
+  `negative.js` adds the tooltip, the keyboard route through the field and the
+  per-code filter on top of a page that is already whole.
+-#}
+{% block title %}{{ t('title.join', page=t('negative.heading'), site=collection.title) }}{% endblock %}
+{% block main %}
+
+{#- One left edge from the masthead to the colophon: the field wants the full
+    measure and the prose does not, so the wrapper is the wide one throughout
+    and the reading column is held to its own width inside it. Two wrappers
+    would give the page two different left edges, which reads as two websites
+    stacked on each other. -#}
+<div class="wrap">
+  <div class="negative__reading">
+  <nav class="crumbs" aria-label="{{ t('nav.breadcrumb') }}">
+    <p class="doc__meta"><a href="{{ withheld_url }}">{{ t('withheld.heading') }}</a></p>
+  </nav>
+
+  <h1 class="page-title page-title--tight">{{ t('negative.heading') }}</h1>
+  <p class="page-subtitle">{{ t('negative.intro') }}</p>
+
+  {%- if fields %}
+  <p class="section-note">{{ t('negative.same_size_note') }}</p>
+  {%- endif %}
+
+  {%- if not fields %}
+  {%- if counted_boxes %}
+  {#- Counted, but with no measurable rectangle between them: nothing to draw,
+      and saying "nothing was withheld" here would be false. -#}
+  <p class="empty">{{ t('negative.nothing_drawable', count=counted_boxes) }}</p>
+  {%- else %}
+  <p class="empty">{{ t('negative.nothing_withheld', count=total_pages) }}</p>
+  {%- endif %}
+  </div>
+</div>
+{%- else %}
+  </div>
+
+  <div class="negative{% if fields|length == 1 %} negative--single{% endif %}">
+    {#- The radios come first and the panes after, because the whole toggle is
+        one sibling selector per arrangement and `~` only looks forwards. They
+        are real radio buttons: a screen reader meets a labelled group of three,
+        arrow keys move between them, and none of it needs a script. -#}
+    {%- for f in fields %}
+    <input class="negative__radio visually-hidden" type="radio" name="arrangement"
+           id="arr-{{ f.id }}"{% if loop.first %} checked{% endif %}>
+    {%- endfor %}
+
+    {%- if fields|length > 1 %}
+    <div class="negative__tabs">
+      <span class="negative__tabs-title">{{ t('negative.arrange') }}</span>
+      {%- for f in fields %}
+      <label class="negative__tab" for="arr-{{ f.id }}">{{ f.name }}</label>
+      {%- endfor %}
+    </div>
+    {%- endif %}
+
+    {%- if code_rows|length > 1 %}
+    {#- Inert without a script, so it is not shown without one. Everything it
+        does is a convenience over a picture that is already complete, and the
+        table further down says the same thing in numbers. -#}
+    <div class="negative__filter" hidden data-negative-filter>
+      <span class="negative__tabs-title">{{ t('negative.pick_out') }}</span>
+      <button type="button" class="negative__chip is-on" data-code="" aria-pressed="true">{{ t('negative.everything') }}</button>
+      {%- for row in code_rows %}
+      <button type="button" class="negative__chip" data-code="{{ row.klass }}" aria-pressed="false">{{ row.code or t('negative.no_code_short') }}</button>
+      {%- endfor %}
+    </div>
+    {%- endif %}
+
+    {%- for f in fields %}
+    <figure class="negative__pane negative__pane--{{ f.id }}">
+      {{ f.svg }}
+      <figcaption class="negative__caption">{{ f.caption }}</figcaption>
+    </figure>
+    {%- endfor %}
+  </div>
+
+  <div class="negative__reading">
+
+  {%- if not selection.complete %}
+  <p class="notice notice--warn"><strong>{{ t('negative.incomplete_heading') }}</strong>
+     {{ t('negative.incomplete_body',
+           drawn=selection.drawn_marks,
+           count=selection.total_marks,
+           cells=selection.cells|length,
+           total_cells=selection.total_cells,
+           share=pct((selection.area_share * 100)|round|int)) }}</p>
+  {%- elif not packed %}
+  <p class="section-note section-note--after">{{ t('negative.not_packed', count=limits.packed) }}</p>
+  {%- endif %}
+  {%- if fields and not detail %}
+  <p class="section-note section-note--after">{{ t('negative.merged_note') }}</p>
+  {%- endif %}
+
+  <h2 class="section-title">{{ t('negative.cannot_show') }}</h2>
+  <p class="section-note">{{ t('negative.cannot_show_note') }}</p>
+  <dl class="negative__gaps">
+    {%- for spot in blind_spots %}
+    <div>
+      <dt>{{ spot.heading }}</dt>
+      <dd>{{ spot.body }}</dd>
+    </div>
+    {%- endfor %}
+  </dl>
+
+  {%- if code_rows %}
+  <h2 class="section-title">{{ t('negative.by_exemption') }}</h2>
+  <p class="section-note">{{ t('negative.by_exemption_note1_html') }}</p>
+  <p class="section-note">{{ t('negative.by_exemption_note2') }}</p>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>{{ t('withheld.th_code') }}</th>
+          <th>{{ t('withheld.th_label') }}</th>
+          <th class="num negative__figure">{{ t('negative.th_boxes') }}</th>
+          <th class="num negative__figure">{{ t('negative.th_median') }}</th>
+          <th class="n">{{ t('negative.th_together') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {%- for row in code_rows %}
+        {#- The class the field draws this code with, so the tooltip can name
+            the law from the row a reader can check rather than from a second
+            copy of it shipped as data. -#}
+        <tr{% if row.code %} data-code="{{ row.klass }}"{% endif %}>
+          <td>{% if row.code %}<span class="mono mono--code">{{ row.code }}</span>{% else %}<span class="negative__nocode">{{ t('negative.none_printed') }}</span>{% endif %}</td>
+          <td>{{ row.label }}</td>
+          <td class="num negative__figure">{{ n(row.count) }}</td>
+          <td class="num negative__figure">{{ row.median_text }}</td>
+          <td class="n num"><span class="negative__amount">{{ row.total_text }}</span></td>
+        </tr>
+        {%- endfor %}
+      </tbody>
+    </table>
+  </div>
+  {%- set inherited = code_rows|sum(attribute='inherited') %}
+  {%- if inherited %}
+  <p class="section-note section-note--after">{{ t('negative.inherited', count=inherited) }}</p>
+  {%- endif %}
+  {%- endif %}
+
+  <h2 class="section-title" id="negative-index">{{ t('negative.index_heading') }}</h2>
+  <p class="section-note">{{ t('negative.index_note') }}
+     {%- if cells_listed < selection.cells|length %} {{ t('negative.index_note_capped', count=cells_listed) }}{% endif %}</p>
+
+  <ul class="docs negative__index">
+    {%- for cell in cells %}
+    {%- if loop.first or cell.doc_title != loop.previtem.doc_title %}
+    <li class="negative__index-doc"><h3 class="doc__title">{{ cell.doc_title }}</h3></li>
+    {%- endif %}
+    <li class="doc doc--textonly">
+      <div>
+        <h4 class="doc__title"><a href="{{ cell.url }}">{{ t('page.n', number=cell.number) }}</a>
+          {%- if cell.bates %} <span class="mono mono--fit">{{ cell.bates }}</span>{% endif %}</h4>
+        <p class="doc__meta">
+          <span>{{ t('page.redactions', count=cell.marks|length) }}</span>
+          <span class="sep" aria-hidden="true">·</span>
+          <span>{{ t('negative.cell_share', percent=pct((cell.ratio * 100)|round|int)) }}</span>
+          {#- One span per code. See the same line in `withheld.html.jinja`:
+              a code must not break, a list of codes must, and joining them
+              into one `nowrap` span makes the whole list unbreakable. -#}
+          {%- if cell.codes %}<span class="sep" aria-hidden="true">·</span><span class="doc__codes">{% for code in cell.codes %}<span class="mono mono--code">{{ code }}</span>{{ ', ' if not loop.last }}{% endfor %}</span>{% endif %}
+        </p>
+      </div>
+    </li>
+    {%- endfor %}
+  </ul>
+
+  {%- set withheld_link %}<a href="{{ withheld_url }}">{{ t('negative.withheld_link') }}</a>{% endset %}
+  <p class="section-note section-note--after">{{ t('negative.footer_html', link=withheld_link) }}</p>
+  </div>
+</div>
+{%- endif %}
+{% endblock %}

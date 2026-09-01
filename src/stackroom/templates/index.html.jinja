@@ -1,0 +1,110 @@
+{% extends "base.html.jinja" %}
+{#-
+  The front of the archive.
+
+  It reads like the front matter of a book, in this order: what this is, where
+  it came from, what is in it, what is missing from it, and then the documents.
+  There is deliberately no dashboard here - no row of large numbers, no chart.
+  The ribbon and the ledger say the same things about specific pages a reader
+  can click, which is more useful and less flattering.
+-#}
+{% block main %}
+<div class="wrap wrap--narrow">
+
+  <h1 class="page-title">{{ collection.title }}</h1>
+  {%- if collection.description %}
+  <p class="page-subtitle">{{ collection.description }}</p>
+  {%- endif %}
+
+  {%- if collection.about_html %}
+  <div class="prose">{{ collection.about_html }}</div>
+  {%- else %}
+  <div class="notice notice--warn">
+    <p><strong>{{ t('home.no_about_heading') }}</strong></p>
+    <p>{{ t('home.no_about_body_html') }}</p>
+  </div>
+  {%- endif %}
+
+  <h2 class="section-title">{{ t('home.whats_here') }}</h2>
+
+  <figure class="ribbon-figure">
+    {#- The strip is a picture of the caption. One of them speaks. -#}
+    <div aria-hidden="true">{{ ribbon }}</div>
+    <ul class="ribbon-key">
+      <li><i></i> {{ t('key.readable') }}</li>
+      {%- if collection.stats.pages_with_redactions %}<li><i class="k-part"></i> {{ t('key.part') }}</li>{% endif %}
+      {%- if fully_withheld %}<li><i class="k-full"></i> {{ t('key.full') }}</li>{% endif %}
+      {%- if collection.stats.unreadable_pages %}<li><i class="k-dark"></i> {{ t('key.dark') }}</li>{% endif %}
+      {#- The strip leaves a hole for a page with no ink on it, and the reading
+          of the strip below already counts them, so the key has to say so. -#}
+      {%- if collection.stats.blank_pages %}<li><i class="k-void"></i> {{ t('key.void') }}</li>{% endif %}
+    </ul>
+    <figcaption class="visually-hidden">{{ ribbon_label }}</figcaption>
+  </figure>
+
+  <dl class="ledger">
+    <div>
+      <dt>{{ t('home.ledger_documents') }}</dt>
+      <dd>{{ n(collection.stats.documents) }}<small>{{ t('count.pages', count=collection.stats.pages) }}</small></dd>
+    </div>
+    {#- The one number on this site most likely to be quoted, so the sentence
+        under it names its denominator - and so both denominators are printed.
+        Either figure alone misleads, in opposite directions: one page withheld
+        in full out of a thousand is 100% of that page and 0.1% of the release,
+        and a reader given only the first has been told the agency blacked out
+        everything. Two numbers, each with what it is a share of written under
+        it. What they are and how they are computed: `pipeline.summarise`. -#}
+    <div>
+      <dt>{{ t('home.ledger_withheld') }}</dt>
+      <dd>{{ pct((collection.stats.redaction_ratio * 100)|round(1), digits=1) }}<small>{{ t('home.ledger_withheld_note', count=collection.stats.pages_with_redactions) }}</small></dd>
+      <dd>{{ pct((collection.stats.redaction_ratio_collection * 100)|round(1), digits=1) }}<small>{{ t('home.ledger_withheld_collection_note') }}</small></dd>
+    </div>
+    {%- if collection.stats.unreadable_pages %}
+    <div>
+      <dt>{{ t('home.ledger_unreadable') }}</dt>
+      <dd class="is-warning">{{ n(collection.stats.unreadable_pages) }}<small>{{ t('home.ledger_unreadable_note', count=collection.stats.unreadable_pages) }}</small></dd>
+    </div>
+    {%- endif %}
+    {%- if top_exemption %}
+    {#- Not a count like the three above it, so not in the same track as them. -#}
+    <div class="ledger__law">
+      <dt>{{ t('home.top_exemption') }}</dt>
+      <dd><span class="mono mono--fit">{{ top_exemption[0] }}</span><small>{{ top_exemption[1] }}</small></dd>
+    </div>
+    {%- endif %}
+  </dl>
+
+  {%- if collection.stats.pages_with_redactions %}
+  <p class="section-note section-note--after">
+    <a href="{{ root }}withheld/index.html">{{ t('home.see_withheld') }}</a>
+  </p>
+  {%- endif %}
+
+  <h2 class="section-title">{{ t('nav.documents') }}</h2>
+  <ul class="docs">
+    {%- for item in documents %}
+    <li class="doc">
+      {%- if item.thumb %}
+      <img class="doc__thumb" src="{{ root }}{{ item.thumb }}" width="72" height="93" loading="lazy" decoding="async" alt="">
+      {%- else %}<span class="doc__thumb" aria-hidden="true"></span>{% endif %}
+      <div>
+        <h3 class="doc__title"><a href="{{ item.url }}">{{ item.doc.title }}</a></h3>
+        <p class="doc__meta">
+          <span>{{ t('count.pages', count=item.doc.page_count) }}</span>
+          {%- if item.doc.redacted_pages %}<span class="sep" aria-hidden="true">·</span><span>{{ t('doc.redacted', count=item.doc.redacted_pages) }}</span>{% endif %}
+          {%- if item.doc.bates_gaps %}<span class="sep" aria-hidden="true">·</span><span>{{ t('doc.gaps', count=item.doc.bates_gaps|length) }}</span>{% endif %}
+          {%- if item.doc.unreadable_pages %}<span class="sep" aria-hidden="true">·</span><span>{{ t('doc.unreadable', count=item.doc.unreadable_pages) }}</span>{% endif %}
+        </p>
+        {#- Hidden from assistive technology, like the strip on the front page
+            and for the same reason: the builder writes the reading of it into
+            an aria-label that does not survive being written, and a document
+            row already states its counts in the line above. The full reading
+            is on the document's own page, where the caption carries it. -#}
+        <div aria-hidden="true">{{ item.ribbon }}</div>
+      </div>
+    </li>
+    {%- endfor %}
+  </ul>
+
+</div>
+{% endblock %}

@@ -1,0 +1,144 @@
+name: A document that breaks it
+description: A real, public document that Stackroom reads wrongly. The most useful report there is.
+title: "[document] "
+labels: ["document", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Everything in `ingest/` was written against real damage — real scans,
+        real OCR errors, real agencies' stamps — and it stays correct only
+        because people keep bringing more. A public release that Stackroom
+        mis-reads is worth more than a feature request.
+
+        **Two rules, and they are not negotiable.**
+
+        1. **Link, never attach.** A URL to a document that is already public:
+           an agency reading room, DocumentCloud, a court docket, a newsroom's
+           own posting. If the only copy is yours, say so in the last field and
+           attach nothing — we will work out how to reproduce it from a
+           synthetic file instead.
+        2. **If the fault is a redaction Stackroom failed to see** — a black box
+           over text that is still recoverable — close this form and read
+           [SECURITY.md](https://github.com/stackroom/stackroom/blob/main/SECURITY.md).
+           That report goes privately, and posting the document here could
+           expose whoever the redaction was protecting.
+
+  - type: input
+    id: url
+    attributes:
+      label: Link to the document
+      description: >
+        A direct link, to a copy that is already public. If it sits behind a
+        search form, give the link to the search result page and say what to
+        click.
+      placeholder: "https://www.example.gov/foia/reading-room/2025-00123.pdf"
+    validations:
+      required: true
+
+  - type: input
+    id: pages
+    attributes:
+      label: Which page or pages
+      description: >
+        The page numbers as the PDF counts them, and — if the document is
+        stamped — the control numbers printed on them.
+      placeholder: "pages 14-15 (ACME000031-32)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: got
+    attributes:
+      label: What Stackroom said
+      description: >
+        Paste the output. `stackroom build` prints the counts; `stackroom check`
+        prints the redaction findings without building anything. If the problem
+        is on the built site rather than in the terminal, describe what the page
+        shows.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What the correct answer is
+      description: >
+        This is the field that makes the report fixable, and the one only you
+        can fill in — you are looking at the page. Be concrete and count things.
+        "It says 62% of page 14 is withheld; I count three boxes covering about
+        a fifth of the text" is a complete bug report. "The redaction detection
+        is broken" is not.
+      placeholder: |
+        Stackroom found 1 redaction on page 14. There are 4: three in the
+        second paragraph and one over the signature block.
+
+        The exemption stamped beside them reads (b)(7)(C) but the ledger shows
+        no code for the page.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: what-kind
+    attributes:
+      label: What is it getting wrong
+      description: Tick the closest. If several apply, the first one that is wrong is usually the cause of the rest.
+      multiple: true
+      options:
+        - Redaction count or the withheld percentage
+        - Exemption code missed, mis-read, or attached to the wrong box
+        - Control number (Bates) numbering, or a reported gap that is not one
+        - Page quality — a legible page marked unreadable, or the reverse
+        - Text extraction or OCR output
+        - Search: a phrase that is on the page and is not found
+        - Highlight lands on the wrong word
+        - Something else, described above
+    validations:
+      required: true
+
+  - type: input
+    id: jurisdiction
+    attributes:
+      label: Jurisdiction setting
+      description: The `jurisdiction` in your stackroom.toml — us, uk, ca or eu — or "default" if you did not set one.
+      placeholder: "us"
+    validations:
+      required: false
+
+  - type: textarea
+    id: producer
+    attributes:
+      label: What produced the document
+      description: >
+        `pdfinfo yourfile.pdf` prints Producer and Creator. Those strings name
+        the tool the agency used, and a bug that reproduces on one tool's output
+        usually reproduces on all of it — which is what turns one document into
+        a fix for a whole class.
+      render: text
+      placeholder: |
+        Producer:       Adobe Acrobat Pro 24.2
+        Creator:        Canon iR-ADV C5560
+    validations:
+      required: false
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: stackroom doctor
+      description: Which Tesseract and which poppler read this document. The answer sometimes depends on it.
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before you post
+      options:
+        - label: The document I linked is already public. I have attached nothing.
+          required: true
+        - label: This is not a failed redaction that Stackroom missed. (That goes to SECURITY.md, privately.)
+          required: true
+        - label: I am willing to be asked follow-up questions about the document.
+          required: false

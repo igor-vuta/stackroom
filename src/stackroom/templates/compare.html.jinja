@@ -1,0 +1,289 @@
+{% extends "base.html.jinja" %}
+{#-
+  One document, compared across two releases.
+
+  The order on this page is the order of the argument, and it is deliberate:
+  the alignment first, then what changed, then the noise. A reader who does not
+  accept that page 14 here is page 12 there has no reason to read anything
+  else, so the pairing and its evidence come before any finding that rests on
+  it - not in an appendix.
+
+  The diagram beside each page is both releases' black boxes drawn on one
+  outline of the sheet at true size and position: solid for what is still
+  covered, an outline for what was uncovered, a hatch for what was covered.
+  It is inline SVG written by `compare.py`, correct before any script runs, and
+  it stays correct in a saved copy of this page.
+
+  Four kinds of text arrive here already written and are not translated in this
+  file, because they cannot be: the two release labels and the document titles,
+  which an operator and an agency wrote; the statutory exemption codes, which
+  name a foreign law; the passages quoted out of the documents themselves; and
+  the sentences `compare.py` composes - the refusals, the alignment notes and
+  the per-finding notes - which it takes from the same catalogue this file
+  does, in the same language.
+-#}
+{% block title %}{{ t('title.join', page=t('compare.doc_title', title=entry.title), site=collection.title) }}{% endblock %}
+
+{% block main %}
+<div class="wrap wrap--narrow">
+
+  <p class="crumbs"><a href="{{ root }}compare/index.html">{{ t('compare.short') }}</a></p>
+  <h1 class="page-title">{{ entry.title }}</h1>
+  <p class="page-subtitle">
+     {%- if entry.old_title and entry.old_title != entry.title %}{{ t('compare.against_as_html', title=entry.old_title, release=comparison.old.label) }}
+     {%- else %}{{ t('compare.against', release=comparison.old.label) }}{% endif %}
+     {%- if pair_evidence %} {{ t('compare.pair_evidence', evidence=pair_evidence) }}{% endif %}
+     <a href="{{ root }}d/{{ entry.doc_id }}/index.html">{{ t('compare.read_document') }}</a></p>
+
+  {%- if entry.identical %}
+  <p class="empty">{{ t('compare.identical') }}</p>
+
+  {%- elif not entry.alignment.aligned %}
+  <div class="notice notice--warn">
+    <p>{{ t('compare.not_compared_html', reason=entry.alignment.refusal) }}</p>
+    <p>{{ t('compare.not_compared_why') }}</p>
+  </div>
+
+  {%- else %}
+
+  <h2 class="section-title">{{ t('compare.align_heading') }}</h2>
+  <p class="section-note">{{ t('compare.align_note_html') }}</p>
+  {%- for note in entry.alignment.notes %}
+  <p class="section-note">{{ note }}</p>
+  {%- endfor %}
+
+  <div class="table-scroll">
+    <table class="cmp-align">
+      <thead>
+        <tr>
+          <th>{{ comparison.old.label }}</th>
+          <th>{{ t('compare.th_new') }}</th>
+          <th class="cmp-score">{{ t('compare.th_score') }}</th>
+          <th>{{ t('compare.th_confidence') }}</th>
+          <th>{{ t('compare.th_evidence') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {%- for row in rows %}
+        <tr class="cmp-align__row cmp-align__row--{{ row.confidence if row.old is not none and row.new is not none else 'gap' }}">
+          <td>{% if row.old is not none %}{{ t('compare.page_n', number=row.old) }}{% if row.old_bates %} <span class="mono cmp-stamp">{{ row.old_bates }}</span>{% endif %}{% else %}<span class="cmp-none">—</span>{% endif %}</td>
+          <td>{% if row.new is not none %}<a href="{{ root }}d/{{ entry.doc_id }}/p/{{ row.new }}/index.html">{{ t('compare.page_n', number=row.new) }}</a>{% if row.new_bates %} <span class="mono cmp-stamp">{{ row.new_bates }}</span>{% endif %}{% else %}<span class="cmp-none">—</span>{% endif %}</td>
+          <td class="cmp-score">{% if row.old is not none and row.new is not none %}{{ n(row.score, digits=2) }}{% else %}<span class="cmp-none">—</span>{% endif %}</td>
+          <td>
+            {%- if row.old is none %}<span class="cmp-tag cmp-tag--added">{{ t('compare.tag_added') }}</span>
+            {%- elif row.new is none %}<span class="cmp-tag cmp-tag--gone">{{ t('compare.tag_gone') }}</span>
+            {%- else %}<span class="cmp-tag cmp-tag--{{ row.confidence }}">{{ row.confidence_word }}</span>{% endif %}
+          </td>
+          <td class="cmp-evidence">
+            {%- if row.evidence %}{{ row.evidence }}{% else %}<span class="cmp-none">—</span>{% endif %}
+            {%- if row.moved %} <span class="cmp-tag cmp-tag--moved">{{ t('compare.tag_moved') }}</span>{% endif %}
+          </td>
+        </tr>
+        {%- endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {%- if entry.changed_pages %}
+  <h2 class="section-title">{{ t('compare.pages_heading') }}</h2>
+
+  {%- for figure in figures %}
+  {%- set diff = figure.diff %}
+  <section class="cmp-page" id="p{{ diff.new_number }}">
+    <h3 class="cmp-page__title">
+      <a href="{{ figure.new_url }}">{{ t('page.n', number=diff.new_number) }}</a>
+      <span class="cmp-page__from">{{ t('compare.was_page', number=diff.old_number, release=comparison.old.label) }}</span>
+    </h3>
+
+    <div class="cmp-page__body">
+      <figure class="cmp-figure">
+        {{ figure.diagram }}
+        <figcaption class="cmp-figure__caption">
+          {#- Each swatch and its words are one unit that must not be broken
+              across lines: a legend that wraps between the mark and its name is
+              a legend that says the wrong thing. -#}
+          <span class="cmp-legend"><span class="cmp-swatch cmp-swatch--kept"></span>{{ t('compare.legend_kept') }}</span>
+          <span class="cmp-legend"><span class="cmp-swatch cmp-swatch--lifted"></span>{{ t('compare.legend_lifted', release=comparison.old.label) }}</span>
+          <span class="cmp-legend"><span class="cmp-swatch cmp-swatch--imposed"></span>{{ t('compare.legend_imposed') }}</span>
+        </figcaption>
+        {%- if figure.old_thumb or figure.new_thumb %}
+        <div class="cmp-sheets">
+          {%- if figure.old_thumb %}
+          <figure class="cmp-sheet-fig">
+            <img src="{{ figure.old_thumb }}" alt="{{ t('compare.alt_old', number=diff.old_number) }}" loading="lazy" decoding="async">
+            <figcaption>{{ t('compare.sheet_caption', release=comparison.old.label, state=figure.old_state) }}</figcaption>
+          </figure>
+          {%- endif %}
+          {%- if figure.new_thumb %}
+          <figure class="cmp-sheet-fig">
+            <a href="{{ figure.new_url }}"><img src="{{ figure.new_thumb }}" alt="{{ t('compare.alt_new', number=diff.new_number) }}" loading="lazy" decoding="async"></a>
+            <figcaption>{{ t('compare.sheet_caption', release=t('compare.this_release'), state=figure.new_state) }}</figcaption>
+          </figure>
+          {%- endif %}
+        </div>
+        {%- endif %}
+      </figure>
+
+      <div class="cmp-page__findings">
+        {%- for note in diff.notes %}
+        <p class="notice{{ ' notice--warn' if diff.matched_on_position and loop.first else '' }}">{{ note }}</p>
+        {%- endfor %}
+
+        {%- set disclosed = diff.disclosed|selectattr('confidence', 'equalto', 'corroborated')|list %}
+        {%- set suspected = diff.disclosed|selectattr('confidence', 'equalto', 'suspected')|list %}
+        {%- set blind = diff.disclosed|selectattr('confidence', 'equalto', 'geometry')|list %}
+        {%- set retaken = diff.withheld|selectattr('confidence', 'equalto', 'corroborated')|list %}
+        {%- set retaken_weak = diff.withheld|rejectattr('confidence', 'equalto', 'corroborated')|list %}
+
+        {%- if disclosed %}
+        <h4 class="cmp-finding-title">{{ t('compare.disclosed_heading') }}</h4>
+        <p class="cmp-finding-note">{{ t('compare.disclosed_intro', release=comparison.old.label) }}</p>
+        <ul class="cmp-findings">
+          {%- for f in disclosed %}
+          <li class="cmp-finding" data-confidence="corroborated">
+            <p class="cmp-quote"><span class="cmp-quote__context">{{ f.before }}</span>
+               <mark class="cmp-quote__new">{{ f.text }}</mark>
+               <span class="cmp-quote__context">{{ f.after }}</span></p>
+            <p class="cmp-finding__meta">
+              <span class="cmp-tag cmp-tag--corroborated">{{ t('compare.tag_corroborated') }}</span>
+              <span>{{ t('compare.words', count=f.tokens) }}</span>
+              {%- if f.codes %}<span class="sep" aria-hidden="true">·</span><span>{{ t('compare.was_under_html', codes=f.codes|join(', ')) }}</span>{% endif %}
+              {%- if f.note %}<span class="sep" aria-hidden="true">·</span><span>{{ f.note }}</span>{% endif %}
+            </p>
+          </li>
+          {%- endfor %}
+        </ul>
+        {%- endif %}
+
+        {%- if retaken %}
+        <h4 class="cmp-finding-title cmp-finding-title--withheld">{{ t('compare.withheld_heading') }}</h4>
+        <p class="cmp-finding-note">{{ t('compare.withheld_intro', release=comparison.old.label) }}</p>
+        <ul class="cmp-findings">
+          {%- for f in retaken %}
+          <li class="cmp-finding" data-confidence="corroborated">
+            <p class="cmp-quote"><span class="cmp-quote__context">{{ f.before }}</span>
+               <mark class="cmp-quote__gone">{{ f.text }}</mark>
+               <span class="cmp-quote__context">{{ f.after }}</span></p>
+            <p class="cmp-finding__meta">
+              <span class="cmp-tag cmp-tag--corroborated">{{ t('compare.tag_corroborated') }}</span>
+              <span>{{ t('compare.words', count=f.tokens) }}</span>
+              {%- if f.codes %}<span class="sep" aria-hidden="true">·</span><span>{{ t('compare.now_under_html', codes=f.codes|join(', ')) }}</span>{% endif %}
+              {%- if f.note %}<span class="sep" aria-hidden="true">·</span><span>{{ f.note }}</span>{% endif %}
+            </p>
+          </li>
+          {%- endfor %}
+        </ul>
+        {%- endif %}
+
+        {%- if blind %}
+        <h4 class="cmp-finding-title">{{ t('compare.blind_heading') }}</h4>
+        <ul class="cmp-findings">
+          {%- for f in blind %}
+          <li class="cmp-finding" data-confidence="geometry">
+            <p class="cmp-finding__meta">
+              <span class="cmp-tag cmp-tag--geometry">{{ t('compare.tag_geometry') }}</span>
+              <span>{{ f.note }}</span>
+              {%- if f.codes %}<span class="sep" aria-hidden="true">·</span><span>{{ t('compare.had_been_under_html', codes=f.codes|join(', ')) }}</span>{% endif %}
+              <span class="sep" aria-hidden="true">·</span><a href="{{ figure.new_url }}">{{ t('compare.look_at_scan') }}</a>
+            </p>
+          </li>
+          {%- endfor %}
+        </ul>
+        {%- endif %}
+
+        {%- if suspected or retaken_weak %}
+        <details class="cmp-details">
+          <summary>{{ t('compare.doubted_summary', count=(suspected|length) + (retaken_weak|length)) }}</summary>
+          <p class="cmp-finding-note">{{ t('compare.doubted_note') }}</p>
+          <ul class="cmp-findings">
+            {%- for f in suspected + retaken_weak %}
+            <li class="cmp-finding" data-confidence="suspected">
+              <p class="cmp-quote"><span class="cmp-quote__context">{{ f.before }}</span>
+                 <span class="cmp-quote__weak">{{ f.text }}</span>
+                 <span class="cmp-quote__context">{{ f.after }}</span></p>
+              <p class="cmp-finding__meta"><span class="cmp-tag cmp-tag--suspected">{{ t('compare.tag_suspected') }}</span>
+                 <span>{{ t('compare.unmatched_share', percent=pct(f.unmatched, of_one=True)) }}</span></p>
+            </li>
+            {%- endfor %}
+          </ul>
+        </details>
+        {%- endif %}
+
+        {%- if diff.code_changes or diff.exemption_added or diff.exemption_removed %}
+        <h4 class="cmp-finding-title">{{ t('withheld.under_law') }}</h4>
+        <ul class="cmp-findings">
+          {%- for c in diff.code_changes %}
+          <li class="cmp-finding">
+            <p class="cmp-finding__meta">{{ t('compare.code_change_html',
+               old=c.old_codes|join(', ') or t('compare.no_code'),
+               new=c.new_codes|join(', ') or t('compare.no_code')) }}</p>
+          </li>
+          {%- endfor %}
+          {#- Page-level codes, which is what most releases give us: an agency
+              prints the exemption in a margin or a footer, not against the box.
+              A code appearing or disappearing from a page is a weaker fact than
+              a code changing on one box, and it is worded as the weaker fact. -#}
+          {%- if diff.exemption_added %}
+          <li class="cmp-finding">
+            <p class="cmp-finding__meta">{{ t('compare.exemption_added_html',
+               codes=diff.exemption_added|join(', '), release=comparison.old.label) }}</p>
+          </li>
+          {%- endif %}
+          {%- if diff.exemption_removed %}
+          <li class="cmp-finding">
+            <p class="cmp-finding__meta">{{ t('compare.exemption_removed_html',
+               codes=diff.exemption_removed|join(', '), release=comparison.old.label) }}</p>
+          </li>
+          {%- endif %}
+        </ul>
+        {%- endif %}
+
+        <p class="cmp-geometry">
+          {{- t('compare.geometry',
+                count=diff.boxes|length,
+                unchanged=diff.boxes|selectattr('kind', 'equalto', 'unchanged')|list|length,
+                removed=diff.boxes|selectattr('kind', 'equalto', 'removed')|list|length,
+                added=diff.boxes|selectattr('kind', 'equalto', 'added')|list|length,
+                shrunk=diff.boxes|selectattr('kind', 'equalto', 'shrunk')|list|length,
+                grown=diff.boxes|selectattr('kind', 'equalto', 'grown')|list|length,
+                moved=diff.boxes|selectattr('kind', 'equalto', 'moved')|list|length) }}
+          {%- if diff.noise_tokens %} {{ t('compare.geometry_noise', count=diff.noise_tokens) }}{% endif %}
+        </p>
+      </div>
+    </div>
+  </section>
+  {%- endfor %}
+
+  {%- if truncated %}
+  <p class="section-note">{{ t('compare.truncated', count=truncated) }}</p>
+  {%- endif %}
+  {%- endif %}
+
+  {%- if entry.new_only_pages or entry.old_only_pages %}
+  <h2 class="section-title">{{ t('compare.only_heading') }}</h2>
+  {%- if entry.new_only_pages %}
+  <p class="section-note">{{ t('compare.only_new_note', count=entry.new_only_pages|length, release=comparison.old.label) }}</p>
+  <ul class="cmp-pagelist">
+    {%- for number in entry.new_only_pages %}
+    <li><a href="{{ root }}d/{{ entry.doc_id }}/p/{{ number }}/index.html">{{ t('compare.page_n', number=number) }}</a></li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+  {%- if entry.old_only_pages %}
+  <p class="section-note">{{ t('compare.only_old_note', release=comparison.old.label) }}</p>
+  <ul class="cmp-pagelist">
+    {%- for number in entry.old_only_pages %}
+    <li>{{ t('compare.page_n_old', number=number) }}</li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+  {%- endif %}
+
+  {#- closes the identical / not-aligned / compared choice at the top -#}
+  {%- endif %}
+
+  <p class="section-note section-note--after">
+    <a href="{{ root }}compare/index.html#wrong">{{ t('compare.wrong_link') }}</a></p>
+
+</div>
+{% endblock %}

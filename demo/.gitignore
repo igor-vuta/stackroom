@@ -1,0 +1,7 @@
+# The documents and the built sites are generated. `python demo/build-demo.py`
+# rebuilds all of it in about two minutes, and committing several megabytes of
+# scanned annexes would charge every clone for them for ever.
+*.pdf
+site/
+site-ridgeway/
+__pycache__/

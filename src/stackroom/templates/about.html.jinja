@@ -1,0 +1,82 @@
+{% extends "base.html.jinja" %}
+{% block title %}{{ t('title.join', page=t('nav.about'), site=collection.title) }}{% endblock %}
+{% block main %}
+<div class="wrap wrap--narrow">
+
+  <h1 class="page-title">{{ t('about.heading') }}</h1>
+
+  {%- if collection.about_html %}
+  <div class="prose">{{ collection.about_html }}</div>
+  {%- endif %}
+
+  <h2 class="section-title">{{ t('about.how') }}</h2>
+  <div class="prose">
+    {%- set stackroom_link %}<a href="https://github.com/igor-vuta/stackroom">Stackroom</a>{% endset %}
+    <p>{{ t('about.how_p1_html', link=stackroom_link) }}</p>
+    <p>{{ t('about.how_p2') }}</p>
+    {%- if collection.stats.pages_with_redactions %}
+    <p>{{ t('about.how_p3') }}</p>
+    {%- endif %}
+  </div>
+
+  <h2 class="section-title">{{ t('about.contents') }}</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>{{ t('about.th_document') }}</th><th>{{ t('about.th_pages') }}</th><th>{{ t('about.th_bytes') }}</th><th>{{ t('about.th_sha') }}</th></tr></thead>
+      <tbody>
+        {#- A document gets two digests when the file published here is not the
+            file that arrived - which is what `safety.strip_metadata` does, on
+            purpose. One number and an instruction to compare it against a
+            download that will not match it is the archive telling the reader
+            something is wrong with it. `digests` is empty on an ordinary
+            build, and this table is then byte-for-byte what it always was. -#}
+        {%- for doc in collection.documents %}
+        {%- set republished = (digests or {}).get(doc.id) %}
+        <tr>
+          <td><a href="{{ root }}d/{{ doc.id }}/index.html">{{ doc.title }}</a></td>
+          <td class="num">{{ n(doc.page_count) }}</td>
+          <td class="num">{{ n(doc.size_bytes) }}</td>
+          {%- if republished %}
+          {#- Labelled with the manifest's own field names rather than with a
+              sentence: they are the same two words in every language, and they
+              are what the reader will find beside these numbers in
+              manifest.json. -#}
+          <td>
+            <small lang="en" dir="ltr">sha256</small>
+            <span class="mono mono--fit">{{ doc.sha256[:24] }}…</span><br>
+            <small lang="en" dir="ltr">published_sha256</small>
+            <span class="mono mono--fit">{{ republished.published[:24] }}…</span>
+          </td>
+          {%- else %}
+          <td><span class="mono mono--fit">{{ doc.sha256[:24] }}…</span></td>
+          {%- endif %}
+        </tr>
+        {%- endfor %}
+      </tbody>
+    </table>
+  </div>
+  {%- set manifest_link %}<a href="{{ root }}manifest.json">{{ t('about.manifest_link') }}</a>{% endset %}
+  <p class="section-note section-note--after">{{ t('about.digests_html', link=manifest_link) }}</p>
+  {%- if digests %}
+  {#- Two messages, not one: the first has to agree with a count and the second
+      is markup around three literal names - `sha256`, `published_sha256` and
+      the command - that no language translates. Splitting them there keeps the
+      plural forms off the half that has tags in it. -#}
+  <p class="section-note section-note--after">
+    {{ t('about.two_digests', count=digests|length) }}
+    {{ t('about.two_digests_which_html', link=manifest_link) }}
+  </p>
+  {%- endif %}
+
+  {%- if collection.stats.languages %}
+  <h2 class="section-title">{{ t('about.languages') }}</h2>
+  <p class="section-note">{{ t('about.languages_note', languages=language_names|join(', ')) }}</p>
+  {%- endif %}
+
+  <h2 class="section-title">{{ t('about.keeping') }}</h2>
+  <div class="prose">
+    <p>{{ t('about.keeping_p1') }}</p>
+  </div>
+
+</div>
+{% endblock %}

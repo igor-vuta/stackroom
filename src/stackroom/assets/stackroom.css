@@ -1,0 +1,1383 @@
+/* ==========================================================================
+   Stackroom
+   --------------------------------------------------------------------------
+   The published archive's entire stylesheet. It is meant to be read: if you
+   have inherited a site built with this and want to change how it looks, this
+   file is the whole story, and the tokens at the top are where to start.
+
+   Three rules held throughout, and worth knowing before you edit:
+
+   1. The scan is the document. Everything here recedes behind it - the
+      interface never competes with the page it is showing, never tints it,
+      never rounds its corners, never forces it to white.
+
+   2. Nothing is decorative. Every rule below either makes something readable,
+      makes something reachable, or tells the reader something true about the
+      documents. There is no ornament to remove because none was added.
+
+   3. Absence is content. A redaction is not a rendering failure to be hidden;
+      it is the most important thing on the page. It gets typography, a label,
+      a count and a colour of its own.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Tokens
+   --------------------------------------------------------------------------
+   Warm neutrals, not greys. Pure #fff beside a scanned page reads blue, and a
+   scan on pure white reads dirty; two percent of warmth in the paper fixes
+   both. It is not a beige wash - that reads as a template - just enough that
+   the screen and the paper agree.
+   -------------------------------------------------------------------------- */
+
+/* --------------------------------------------------------------------------
+   Which palette, and who decides
+   --------------------------------------------------------------------------
+   Three states, not two: the reader has chosen light, the reader has chosen
+   dark, or the reader has not chosen and the system speaks for them. A
+   selector cannot ask what the system prefers and a media query cannot ask
+   what the reader chose, so the two questions have to be asked separately -
+   but the palette is written once, below, and these four rules only decide
+   which half of each line is read.
+
+   `--if-light: initial` makes a custom property guaranteed-invalid, so
+   `var(--if-light, X)` falls back to X. `--if-light: ;` makes it an empty
+   value, which substitutes as nothing at all. Exactly one of the two switches
+   is ever "on", so `var(--if-light, A) var(--if-dark, B)` is A or B and never
+   both. It costs two declarations per state and no bytes at all per token.
+
+   The dark palette used to live only inside the media query, which left
+   `data-theme="dark"` with nothing to do on a light system - the exact case a
+   reader creates by choosing Dark in the settings panel - and forced a second
+   copy of all seventeen colours into assets/parts/prefs.css to cover it. That
+   copy is now redundant.
+   -------------------------------------------------------------------------- */
+
+:root { --if-light: initial; --if-dark: ; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --if-light: ; --if-dark: initial; }
+}
+
+:root[data-theme="dark"] { --if-light: ; --if-dark: initial; }
+:root[data-theme="light"] { --if-light: initial; --if-dark: ; }
+
+/* The dark palette is not the light one inverted. It is the same room at
+   night: the paper goes to the colour of a dark shelf rather than to black,
+   the ink stops short of white so a page of transcription does not glare, and
+   every pair below was measured against its own ground rather than assumed to
+   survive the flip. The one thing that does invert is the redaction: a bar
+   set in the ink colour is light there, because it is still the ink.
+
+   Light value first, dark value second, on one line, so the pair can be read
+   as the pair it is. */
+
+:root {
+  color-scheme: var(--if-light, light) var(--if-dark, dark);
+
+  --paper: var(--if-light, #fbfaf7) var(--if-dark, #14130f);
+  /* the mount a scan sits on, and table stripes */
+  --paper-sunk: var(--if-light, #f4f1ea) var(--if-dark, #1d1b16);
+  /* sheets that sit above the page */
+  --paper-raised: var(--if-light, #ffffff) var(--if-dark, #1d1b16);
+  --ink: var(--if-light, #1c1a17) var(--if-dark, #ede8de);
+  --ink-muted: var(--if-light, #5a544b) var(--if-dark, #a39c8f);
+  /* light 4.98:1 on paper, 4.61:1 on the sunk mount;
+     dark  4.89:1 on paper, 4.53:1 on the sunk mount */
+  --ink-faint: var(--if-light, #726c63) var(--if-dark, #8a8274);
+
+  /* Three weights of line, and the difference between them is not taste.
+     --rule is a hairline between rows of the same thing; it may be quiet
+     because the whitespace either side is already doing the separating.
+     --rule-strong is a line that means something on its own - a quote bar, a
+     notice's spine, the ribbon's tick for an ordinary page.
+     --edge is the boundary of something the reader operates: a text field, a
+     key cap, the shortcut sheet. WCAG 1.4.11 asks 3:1 of those against what
+     is next to them on both sides, so --edge clears 3:1 against paper and
+     against the white a field is filled with. The other two do not have to,
+     and are lighter on purpose. */
+  --rule: var(--if-light, #d9d2c6) var(--if-dark, #3a352c);
+  --rule-strong: var(--if-light, #c9c1b4) var(--if-dark, #4a443a);
+  /* light 3.24:1 on paper, 3.38:1 on white;
+     dark  3.49:1 on paper, 3.23:1 on the sunk mount */
+  --edge: var(--if-light, #918b81) var(--if-dark, #736a5b);
+
+  /* Desaturated teal-slate: ledger ink, blueprint, microfilm. Institutional
+     memory without the institution. Not navy (governmental), not #0066cc
+     (every government site on earth), not violet, not green. */
+  --accent: var(--if-light, #2c5f6f) var(--if-dark, #7fb8c6);
+  --accent-quiet: var(--if-light, #e3edf0) var(--if-dark, #1e2f34);
+
+  /* A found word is marked with a wash and an underline. The wash carries no
+     luminance (1.15:1 - it is a hue, which is the point), so the underline is
+     the part that has to survive: it is the non-colour cue SC 1.4.1 asks for,
+     and it clears 3:1 against both the paper and the wash it sits inside. */
+  /* Two grounds, not one. The transcription is set on this archive's paper and
+     its wash is themed with it; the boxes drawn over the *scan* are on a
+     photocopy, which is white in every theme, so they get the paper pair below
+     whatever the reader has chosen. The dark wash on white measures 2.44:1 for
+     the scan's own ink against 17.4:1 for the pale one - a highlight that
+     hides the words it marks. Same argument as `mix-blend-mode` on `.hit`. */
+  --highlight-paper: #ffe9a8;
+  --highlight-paper-edge: #9c8433;  /* 3.49:1 on paper, 3.03:1 on the wash */
+  --highlight: var(--if-light, var(--highlight-paper)) var(--if-dark, #5c4a16);
+  --highlight-ink: var(--if-light, #1c1a17) var(--if-dark, #fff3d0);
+  --highlight-edge: var(--if-light, var(--highlight-paper-edge)) var(--if-dark, #c2a24a);
+
+  /* Redaction. Deliberately the ink colour, not black: a redaction bar is a
+     typographic object set in the same ink as the text it replaces, not a hole
+     punched in the page. */
+  --withheld: var(--if-light, #1c1a17) var(--if-dark, #ede8de);
+  --withheld-ink: var(--if-light, #fbfaf7) var(--if-dark, #14130f);
+  /* pages search cannot see into */
+  --unreadable: var(--if-light, #b0553a) var(--if-dark, #e08a6a);
+
+  --measure: 34rem;           /* ~68 characters of the reading serif */
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --rhythm: 1.6;
+
+  /* Vertical rhythm, and it is two systems rather than one, deliberately.
+
+     These five steps are the page's structure: the distance from a section to
+     its heading, from a list to the rule under it, from the last document to
+     the colophon. Anything that separates one thing from another thing uses
+     one of them, and nothing in between. The file used to carry 0.55rem,
+     0.6rem and 0.7rem for the same job in three places.
+
+     Inside a component the numbers are typographic instead - the 0.4rem gap
+     between a swatch and its label, the 1.1rem a list is indented, the 0.15rem
+     that lifts a subscript off a baseline. Those are answers to a particular
+     piece of type at a particular size, they are written out where they are
+     used, and rounding them onto a grid would make them worse. A scale that
+     claims to cover both is a scale somebody is quietly ignoring. */
+  --space-1: 0.5rem;          /* a caption from the thing it captions */
+  --space-2: 1rem;            /* a heading from its first line */
+  --space-3: 1.5rem;          /* one component from the next */
+  --space-4: 2.5rem;          /* a title from what comes before it */
+  --space-5: 3.5rem;          /* one section from the next */
+
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.0625rem;
+  --step-2: clamp(1.25rem, 1rem + 1.1vw, 1.5rem);
+  --step-3: clamp(1.5rem, 1.1rem + 2vw, 2.25rem);
+
+  /* Fast to arrive, slow to leave. A hover that fades in over 180ms feels
+     like the page is thinking about it; one that fades out that slowly feels
+     like the page is still there after the pointer has gone, which is true. */
+  --in: 90ms;
+  --out: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* The one drawn shape in this stylesheet, and it is here to replace a shape
+     the browser draws in its own blue. Inline because a separate file for two
+     strokes is a request the archive would have to carry forever. */
+  --cross: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><path d="M1 1 11 11M11 1 1 11" stroke="black" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>');
+}
+
+
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* The masthead is sticky, so anything the browser scrolls to - the skip
+     link's target, a #w= search hit, the back button restoring a position -
+     would otherwise arrive underneath it. */
+  scroll-padding-top: 4.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: var(--rhythm);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* The reader's own selection and the archive's found-text speak one language. */
+::selection {
+  background: var(--highlight);
+  color: var(--highlight-ink);
+}
+
+/* :focus-visible only, and a two-tone ring so it clears 3:1 against paper,
+   against a scan, and against a black redaction bar alike. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--paper);
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--edge);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color var(--out) var(--ease), color var(--out) var(--ease);
+}
+
+a:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+  transition-duration: var(--in);
+}
+
+img { max-width: 100%; height: auto; }
+
+/* Numbers must not shimmer while the reader pages through a document. Every
+   count, page number, date, percentage and checksum in this archive is
+   tabular. */
+.num, time, td, th, .ledger dd, .pager__where {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Almost everything set in mono here is somebody else's identifier - a control
+   number, a checksum, a file name - and how long it is is a fact about their
+   numbering scheme rather than about this design. So the default is that it
+   may break rather than carry the page sideways with it. `anywhere` and not
+   `break-word`: these sit in flex and grid tracks - `.doc` is a grid,
+   `.doc__meta` a flex row - and only `anywhere` brings the track's min-content
+   width down with it. `break-word` would leave the track as wide as the whole
+   token and overflow anyway. */
+.mono, code, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+}
+
+/* Two exceptions, and they are exceptions for different reasons.
+
+   A statutory code is one word however many brackets are in it: b(7)(C) was
+   breaking after the first bracket and reading as two codes. It has to stay
+   whole wherever it is printed, so it says so - `.mono--code` - rather than
+   inheriting it from the furniture it happens to sit in. (`.ledger__law dd` is
+   the front page's single code, in a template with no class of its own.)
+
+   A table cell keeps everything in it whole because the table already has an
+   answer for being too wide: `.table-scroll` scrolls it. Letting a checksum
+   break there would fold a column to one character rather than scroll, which
+   is the worse of the two. `overflow-wrap` is reset as well as `white-space`,
+   because `anywhere` is also what a min-content width is measured with.
+
+   What is *not* an exception any more is `.doc__meta .mono`, which is where
+   this went wrong. That was a description of a place rather than of a kind of
+   thing, and it made a control number as unbreakable as a code - and, because
+   the ledger prints a page's whole exemption list, made the list unbreakable
+   too: six codes joined into one span is a 40-character run nothing may break,
+   and it pushed `withheld/index.html` 120px past a 380px phone. */
+.mono--code, .ledger__law dd .mono { white-space: nowrap; }
+td > .mono { white-space: nowrap; overflow-wrap: normal; }
+
+/* A list of codes: one span per code, so each is atomic and the line breaks
+   between them. The wrapper keeps the list as one item of the meta row -
+   without it each code would be a flex item of `.doc__meta` and sit a full
+   0.9rem from its neighbours, reading as four separate facts rather than one
+   list - and it carries the click-to-select that `.doc__meta > .mono` gives a
+   control number, per code rather than over the whole run. */
+.doc__codes .mono { user-select: all; }
+
+/* The mono face runs large next to the sans at the same size. Where it sits
+   inside display type - a checksum in a table, an exemption code in the
+   ledger - it comes down to match the surrounding x-height by eye. */
+.mono--fit { font-size: 0.82em; }
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--paper-raised);
+  color: var(--ink);
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--edge);
+  z-index: 100;
+}
+.skip:focus { left: var(--space-1); top: var(--space-1); }
+
+/* The skip link's target. It takes focus so the next Tab continues from the
+   document rather than from the top of the page again, and it must not draw a
+   ring for that - the reader asked to be moved, they do not need telling. */
+#main:focus { outline: none; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%);
+  overflow: hidden; white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Shell
+   -------------------------------------------------------------------------- */
+
+.wrap {
+  max-width: 72rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.wrap--narrow { max-width: 46rem; }
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.masthead__inner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem 1.5rem;
+  flex-wrap: wrap;
+  padding-block: 0.7rem;
+  min-height: 3rem;
+}
+
+.masthead__title {
+  font-size: var(--step-0);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.005em;
+}
+
+.masthead__title a { text-decoration: none; }
+
+/* `flex-wrap` is not a nicety. This started as a nowrap row that four short
+   links happened to fit into; with the settings and palette controls added it
+   is seven items, and at 380px with the text set to its largest step they
+   overflowed the page by 101px - a horizontal scrollbar on a phone, on every
+   page of the archive. */
+.masthead__nav {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  font-size: var(--step--1);
+}
+
+.masthead__nav a {
+  text-decoration: none;
+  color: var(--ink-muted);
+  padding-block: 0.25rem;
+  border-bottom: 2px solid transparent;
+}
+.masthead__nav a:hover { color: var(--ink); }
+.masthead__nav a[aria-current="page"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* Once the nav has wrapped onto its own row, pushing it right leaves the page
+   with two left edges and a ragged corner. Below this width it starts where
+   the title starts, and the masthead loses a few pixels it was not using. */
+@media (max-width: 34rem) {
+  .masthead__nav { margin-left: 0; gap: 1rem; }
+  .masthead__inner { padding-block: 0.55rem; min-height: 0; }
+  /* Two rows of masthead to clear instead of one. */
+  html { scroll-padding-top: 6.5rem; }
+}
+
+.colophon {
+  margin-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+  padding-block: var(--space-3) var(--space-4);
+  color: var(--ink-faint);
+  font-size: var(--step--1);
+}
+
+.colophon p { margin: 0 0 0.35rem; max-width: 42rem; }
+/* A digest is one long unbreakable token; it has to be allowed to break or it
+   pushes the whole page sideways on a phone. */
+.colophon .mono { color: var(--ink-muted); word-break: break-all; }
+
+/* --------------------------------------------------------------------------
+   Prose
+   --------------------------------------------------------------------------
+   The reading serif is where the warmth in this design lives. It is used for
+   what a person wrote - the provenance note, a document's summary, the
+   transcribed page - and never for interface furniture.
+   -------------------------------------------------------------------------- */
+
+.prose {
+  font-family: var(--font-serif);
+  font-size: var(--step-1);
+  line-height: 1.65;
+  max-width: var(--measure);
+  hanging-punctuation: first last;   /* Safari today; harmless elsewhere */
+}
+
+.prose p { margin: 0 0 1.1em; }
+.prose > :first-child { margin-top: 0; }
+.prose > :last-child { margin-bottom: 0; }
+
+.prose a { text-decoration-color: var(--accent); }
+
+.prose blockquote {
+  margin: 1.6em 0;
+  padding-left: 1.2em;
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+.page-title {
+  font-size: var(--step-3);
+  margin-block: var(--space-4) 0.6rem;
+}
+
+/* A page inside a document arrives under a breadcrumb rather than under the
+   masthead, so it needs a fraction of the space, not the full step. */
+.page-title--tight { margin-block: 0.4rem 0.25rem; }
+
+.page-subtitle {
+  font-family: var(--font-serif);
+  font-size: var(--step-1);
+  color: var(--ink-muted);
+  margin: 0 0 var(--space-4);
+  max-width: var(--measure);
+}
+
+.section-title {
+  font-size: var(--step-2);
+  margin-block: var(--space-5) var(--space-2);
+}
+
+.section-note {
+  color: var(--ink-muted);
+  max-width: var(--measure);
+  margin: 0 0 var(--space-3);
+}
+
+/* A note that follows a block rather than introducing one. */
+.section-note--after { margin-block: var(--space-2) 0; }
+
+/* --------------------------------------------------------------------------
+   The ribbon
+   --------------------------------------------------------------------------
+   One tick per page, in page order, coloured by what we know about that page:
+   ordinary, partly withheld, withheld in full, or unreadable by search.
+
+   It is the signature object of this design and it does three jobs at once -
+   it is the table of contents, the map of the redactions, and the one place
+   that says which pages search cannot see into. Which is why there is no
+   statistics row anywhere in this archive: the ribbon already said it, in
+   less space, about specific pages you can click.
+
+   It is not, and does not claim to be, a map of where a search matched. There
+   is no state for that and nothing sets one.
+
+   Runs of identical pages are merged into a single rect when the site is
+   built, so a 2,000-page document is a handful of shapes rather than 2,000.
+   -------------------------------------------------------------------------- */
+
+.ribbon {
+  display: block;
+  width: 100%;
+  height: 1.75rem;
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+/* The graphic and the sentence that describes it are one object. The <svg>
+   is hidden from assistive technology by its wrapper and the whole reading of
+   it - "16 pages, 4 partly withheld, 1 withheld in full" - is carried by the
+   figure's caption, which is the same words a sighted reader gets from the
+   key underneath. Announcing both would say it twice. */
+.ribbon-figure { margin-block: var(--space-3) var(--space-4); }
+
+/* The strip on a page view, which is the pager's other half rather than a
+   figure of its own: it says where you are, the pager goes somewhere else, and
+   a component gap between them would read as two unrelated controls. */
+.ribbon-figure--pager {
+  margin-block: var(--space-4) var(--space-2);
+  /* A <figure> carries 40px of user-agent side margin, which the two standalone
+     ribbons keep and this one must not: it sits directly above the pager's rule
+     and an inset strip over a full-width rule reads as two things, not one. */
+  margin-inline: 0;
+}
+
+.ribbon-figure--pager + .pager { margin-top: 0; }
+
+.ribbon rect { shape-rendering: crispEdges; }
+.ribbon .r-plain { fill: var(--rule-strong); }
+.ribbon .r-part { fill: var(--withheld); fill-opacity: 0.55; }
+.ribbon .r-full { fill: var(--withheld); }
+.ribbon .r-dark { fill: var(--unreadable); }
+/* A page with no ink at all. Left as a hole in the strip rather than given a
+   colour, because that is what it is: the mount showing through. */
+.ribbon .r-void { fill: transparent; }
+
+/* Where you are, on the strip on a page view. Two strokes, not one: the ticks
+   this sits on run from the ink colour to the paper colour, so a single line
+   in any one colour disappears on some of them. The casing is the paper and
+   the core is the accent, which gives the mark an edge against every tick in
+   the key. Non-scaling so the strip's viewBox, which is stretched to whatever
+   width the column happens to be, cannot make it a hairline or a slab. */
+.ribbon .r-here-casing {
+  stroke: var(--paper);
+  stroke-width: 5;
+}
+
+.ribbon .r-here {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.ribbon-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin-top: var(--space-1);
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+  list-style: none;
+  padding: 0;
+}
+
+.ribbon-key li { display: flex; align-items: center; gap: 0.4rem; }
+
+.ribbon-key i {
+  width: 0.7rem;
+  height: 0.7rem;
+  display: inline-block;
+  background: var(--rule-strong);
+}
+.ribbon-key .k-part { background: var(--withheld); opacity: 0.55; }
+.ribbon-key .k-full { background: var(--withheld); }
+.ribbon-key .k-dark { background: var(--unreadable); }
+/* A hole in the strip, drawn as a hole: the mount showing through a frame. */
+.ribbon-key .k-void {
+  background: var(--paper-sunk);
+  outline: 1px solid var(--edge);
+  outline-offset: -1px;
+}
+
+/* --------------------------------------------------------------------------
+   The ledger
+   --------------------------------------------------------------------------
+   What is here, and what is missing from it. Set as a definition list rather
+   than a row of big numbers: a headline figure with no denominator is a
+   marketing device, and this is not that.
+   -------------------------------------------------------------------------- */
+
+/* Three columns or one, and nothing between. auto-fit was choosing two at
+   some widths, which left the third count alone on a row of its own - the
+   same orphan the law row below was, one level down. Three named facts want
+   to be read across, or read down; half of each is just a ragged edge. */
+.ledger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3) 2rem;
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--rule);
+}
+
+@media (min-width: 36rem) {
+  .ledger { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.ledger div { margin: 0; }
+
+/* The last entry on the front page is not a count, it is a citation: a code
+   and the sentence of law behind it. Left in the same track as the counts it
+   was a fourth item in a three-column grid - an orphan on its own row, which
+   is what a grid does when you give it a thing that is not like the others.
+   It gets the full width instead, below a rule, which is both what fits and
+   what is true about it. */
+.ledger__law {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 0.15rem 1rem;
+  align-items: baseline;
+}
+
+.ledger__law dt { grid-column: 1 / -1; }
+.ledger__law dd small { margin-top: 0; max-width: var(--measure); }
+
+@media (max-width: 30rem) {
+  .ledger__law { grid-template-columns: 1fr; }
+}
+
+.ledger dt {
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+  margin-bottom: 0.2rem;
+}
+
+.ledger dd {
+  margin: 0;
+  font-size: var(--step-2);
+  font-weight: 600;
+  letter-spacing: -0.012em;   /* the same tracking as display type this size */
+}
+
+.ledger dd small {
+  display: block;
+  text-wrap: pretty;
+  font-size: var(--step--1);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.45;
+  color: var(--ink-muted);
+  margin-top: 0.15rem;
+}
+
+.ledger dd.is-warning { color: var(--unreadable); }
+
+/* --------------------------------------------------------------------------
+   Document list
+   -------------------------------------------------------------------------- */
+
+.docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.doc {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0 1.25rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--rule);
+  align-items: start;
+}
+
+/* A row with nothing to show for itself - a range of pages that were withheld
+   in full, so there is no scan and no thumbnail to put beside it. */
+.doc--textonly { grid-template-columns: minmax(0, 1fr); }
+
+/* Optical alignment: the thumbnail's 1px border is cancelled so its *image*
+   edge, not its box edge, lines up with the text column above and below. */
+.doc__thumb {
+  margin-left: -1px;
+  border: 1px solid var(--rule);
+  background: var(--paper-sunk);
+  display: block;
+  width: 4.5rem;
+  aspect-ratio: 17 / 22;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.doc__title {
+  font-size: var(--step-1);
+  font-weight: 600;
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.008em;
+}
+.doc__title a { text-decoration: none; }
+.doc__title a:hover { text-decoration: underline; }
+
+.doc__meta {
+  color: var(--ink-muted);
+  font-size: var(--step--1);
+  margin: 0 0 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.9rem;
+}
+
+/* Not a rule colour: a middot is a glyph the reader has to see, and at
+   --rule-strong it measured 1.7:1 - technically decorative, actually absent. */
+.doc__meta .sep { color: var(--edge); }
+
+/* The breadcrumb is a line of metadata that happens to be above the title. */
+.crumbs { margin-block: var(--space-3) 0; }
+.crumbs .doc__meta { margin-bottom: 0; }
+
+/* Whatever the archivist wrote about this particular document. */
+.doc__notes { margin-block: var(--space-3); }
+
+/* --------------------------------------------------------------------------
+   Page thumbnails
+   --------------------------------------------------------------------------
+   Every page of a document at once. auto-fill rather than auto-fit, so the
+   last row of a four-page document keeps the same tile size as a forty-page
+   one instead of stretching four thumbnails across the whole width - a page
+   is a fixed thing and should not change size with how many of it there are.
+   -------------------------------------------------------------------------- */
+
+.thumbs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: var(--space-3) 1.25rem;
+}
+
+.thumbs a {
+  display: block;
+  text-decoration: none;
+}
+
+/* Same optical trick as .doc__thumb: the 1px border is pulled back so the
+   image edge, not the box edge, sits on the grid line. */
+.thumbs__img {
+  width: calc(100% + 2px);
+  margin-inline: -1px;
+  display: block;
+  height: auto;
+}
+
+.thumbs__meta {
+  display: block;
+  margin-top: 0.4rem;
+  line-height: 1.4;
+}
+
+/* A tile the reader is pointing at raises its page number, not its picture:
+   the scans keep still and the labels answer. */
+.thumbs a:hover .thumbs__meta { color: var(--ink); }
+
+/* --------------------------------------------------------------------------
+   The page
+   --------------------------------------------------------------------------
+   Scan on one side, what we read off it on the other, in that order in the
+   DOM. At 400% zoom, or below 60rem, the scan becomes a full-width block above
+   the text rather than a shrunken pane - a squinting-sized image helps nobody.
+
+   The text column is the wider of the two. It used to be the narrower one, on
+   the reasoning that the scan is the document - but the scan at either width
+   is too small to read and is there to be recognised and clicked into, while
+   the column beside it is the one being read. Giving the reading column the
+   extra 60px takes a measured 24% of transcribed lines that wrapped down to
+   16%, which is the difference the eye actually notices.
+
+   Both tracks are minmax(0, ...): a grid track sized `1fr` still takes its
+   minimum from its content, so one wide redaction bar inside it will push the
+   whole document sideways on a phone. It did.
+   -------------------------------------------------------------------------- */
+
+.page-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+  gap: clamp(1.25rem, 2.6vw, 2.5rem);
+  align-items: start;
+  margin-top: var(--space-3);
+}
+
+@media (max-width: 60rem) {
+  .page-view { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Sticky, so the scan stays beside whichever part of the transcription is
+   being read. `top` clears the sticky masthead and no more; the scan is
+   pinned to the top of the reading area, not floated in the middle of it. */
+.scan {
+  position: sticky;
+  top: 4.25rem;
+}
+
+@media (max-width: 60rem) {
+  .scan { position: static; }
+}
+
+/* A passe-partout, like a real print mount: the scan keeps its own paper
+   colour, sits on a sunk ground, and is never inverted in dark mode. Turning a
+   1970s photocopy pure white is a lie about the document. */
+.scan__mount {
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule);
+  padding: clamp(0.5rem, 1.4vw, 1rem);
+  position: relative;
+}
+
+.scan__figure {
+  margin: 0;
+  position: relative;
+  line-height: 0;
+  background: var(--paper-raised);
+}
+
+/* Dimmed for a dark reader, not inverted, and not much: a photocopy is mostly
+   white, and a full-strength white rectangle on a dark page is a lamp. Eight
+   percent is enough to stop it glaring and too little to change what the
+   document is. Nothing here touches its colour or its contrast. */
+.scan__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: var(--if-light, none) var(--if-dark, brightness(0.92));
+}
+
+/* Boxes drawn over the scan: found text, and redactions. Positioned in
+   page-relative percentages, which is why every box in the data model is
+   stored that way - the percentages are the only thing the template writes
+   inline, because they are a different four numbers for every box. */
+.scan__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* `multiply` in both themes, and that is not an oversight. The scan is dimmed
+   for a dark reader, never inverted, so the ground under this box is a
+   photocopy: paper, in every theme. `screen` on a white ground washes the fill
+   and the outline both out to white, which leaves hue as the only thing
+   separating a found word from an unfound one - the SC 1.4.1 failure the
+   --highlight-edge note above exists to prevent. */
+.hit {
+  position: absolute;
+  background: var(--highlight-paper);
+  mix-blend-mode: multiply;
+  outline: 1px solid var(--highlight-paper-edge);
+  animation: hit-settle 420ms var(--ease) both;
+}
+
+/* The same geometry, drawn around a redaction instead of a match: an empty
+   dashed frame, so the reader can see that the black block on the scan is one
+   the agency put there and one this archive knows about and has counted. It
+   does not arrive, so it does not animate. */
+/* The same geometry, drawn around a redaction instead of a match: an empty
+   dashed frame, so the reader can see that the black block on the scan is one
+   the agency put there and one this archive knows about and has counted. It
+   does not arrive, so it does not animate.
+
+   The colour is not a token, and that is the point. Every other line in this
+   file sits on the archive's own paper and is themed with it; this one sits on
+   a rectangle of photographic black in the scan, which does not change when
+   the theme does. `--withheld` is the ink colour - near-black in the light
+   theme - so the frame was being drawn in black on black and was invisible to
+   everyone but a forced-colours reader. So: a pale dash for the black it is
+   almost always on, inside a dark hairline for the paper it can overhang.
+   Whichever ground a given edge lands on, one of the two reads against it. */
+.hit--void {
+  background: none;
+  outline: 1px dashed rgb(255 255 255 / 0.92);
+  outline-offset: -1px;
+  box-shadow: 0 0 0 1px rgb(28 26 23 / 0.55);
+  mix-blend-mode: normal;
+  animation: none;
+}
+
+/* Fade, and only fade. The box used to arrive 6% oversized and settle, which
+   for about 200ms covered words it does not mark - in an archive whose whole
+   claim is that the box is exactly where the word is. A highlight that is
+   briefly wrong is worse than one that briefly is not there. */
+@keyframes hit-settle {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No motion, but not no feedback: the box still appears, it just does not
+     travel to get there. */
+  .hit { animation: none; }
+}
+
+.scan__caption {
+  margin: var(--space-1) 0 0;
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+  line-height: 1.45;
+}
+
+/* --------------------------------------------------------------------------
+   The text layer
+   -------------------------------------------------------------------------- */
+
+/* Set smaller than the essay text on purpose. A typed page runs to about a
+   hundred characters a line; at reading size every one of them would wrap once
+   and the column would alternate long, short, long, short all the way down. At
+   this size most source lines fit, and the transcription stays comparable to
+   the scan line for line. */
+.text-layer {
+  font-family: var(--font-serif);
+  font-size: var(--step-0);
+  line-height: 1.72;
+  max-width: 44rem;
+}
+
+/* Every token is a span so a search hit can be found, counted and pointed at.
+   They must be separated by real whitespace in the markup: the search index
+   splits this element's text content on whitespace and reports matches as
+   indices into that list, and the boxes drawn on the scan are looked up by the
+   same index. Collapse the whitespace and every highlight in the archive moves
+   one word to the left. */
+/* One source line per block. The scan sits beside this text, and a
+   transcription that rewraps is much harder to check against it - the eye
+   cannot follow two different line breaks at once.
+
+   About one line in six is still too long for the column and wraps anyway. So
+   the wrap is made to look like a wrap: a hanging indent puts every carried
+   fragment 1.25em in, and the reader can tell at a glance which lines are the
+   document's and which are the browser's. Without it the column alternates
+   long, short, long, short with nothing to say why. */
+.text-layer .ln {
+  display: block;
+  text-wrap: pretty;
+  padding-left: 1.25em;
+  text-indent: -1.25em;
+}
+
+.text-layer .w.is-hit {
+  background: var(--highlight);
+  color: var(--highlight-ink);
+  box-shadow: 0 1px 0 var(--highlight-edge);   /* not colour alone: SC 1.4.1 */
+  border-radius: 1px;
+}
+
+/* Low-confidence recognition. The dotted underline is the whole signal - we do
+   not switch to a typewriter face for OCR text. Scanned typescript is already
+   monospace, so a monospace transcription competes with the scan, and
+   monospace measurably slows reading, which is exactly wrong for someone
+   skimming 1,200 pages. */
+.text-layer .w.is-doubtful {
+  text-decoration: underline dotted var(--ink-faint);
+  text-underline-offset: 0.22em;
+}
+
+.text-layer p { margin: 0 0 0.75em; }
+
+/* A redaction, set as typography: a cap-height bar sitting on the baseline,
+   in ink, not a black hole in the layout. It is as wide as the passage it
+   replaced was wide on the page, which is the one number the template writes
+   inline because it is different for every bar.
+
+   It is not focusable, and that is a decision rather than an omission. It was
+   given tabindex="0" so a keyboard could reach the exemption tooltip; on a
+   page with forty redactions that is forty stops between the breadcrumb and
+   the pager, each announcing "withheld, image", none of them doing anything
+   when activated - forty tab presses to get past a paragraph. Everything the
+   tooltip says is on the page already, spelled out in full, in the notice
+   below the transcription. A screen reader still meets every bar in reading
+   order, where it belongs, because absence is content and this is where the
+   content is missing. */
+.withheld {
+  display: inline-block;
+  vertical-align: baseline;
+  height: 0.72em;
+  min-width: 1.5em;
+  max-width: 100%;
+  margin-inline: 0.06em;
+  background: var(--withheld);
+  border-radius: 1px;
+  box-shadow: inset 0 0 0 1px var(--paper);
+  position: relative;
+  cursor: help;
+  translate: 0 0.02em;
+}
+
+.withheld[data-code]::after {
+  content: attr(data-code);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.4rem);
+  translate: -50% 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 0.35rem 0.5rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--out) var(--ease);
+}
+
+.withheld[data-code]:hover::after {
+  opacity: 1;
+  transition-duration: var(--in);
+}
+
+/* --------------------------------------------------------------------------
+   Notices
+   --------------------------------------------------------------------------
+   Written by a person, addressed to a person, and always saying what to do
+   next. There is no error in this archive that reads "ERR_OCR_LOW_CONF".
+   -------------------------------------------------------------------------- */
+
+.notice {
+  border-left: 2px solid var(--rule-strong);
+  padding: 0.15rem 0 0.15rem 0.9rem;
+  margin: 1.25rem 0;
+  color: var(--ink-muted);
+  font-size: var(--step-0);
+  max-width: var(--measure);
+}
+
+.notice--warn { border-left-color: var(--unreadable); }
+.notice--warn strong { color: var(--unreadable); font-weight: 600; }
+.notice p { margin: 0 0 0.4em; }
+.notice p:last-child { margin-bottom: 0; }
+
+/* The exemptions cited on a page. A list, not a paragraph, because a reader
+   checking one code against another reads down a column, not along a line. */
+.notice__codes {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+.notice__codes li { margin-bottom: 0.15rem; }
+.notice__codes li:last-child { margin-bottom: 0; }
+
+/* --------------------------------------------------------------------------
+   Pager
+   -------------------------------------------------------------------------- */
+
+.pager {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--rule);
+  font-size: var(--step-0);
+}
+
+.pager a { text-decoration: none; color: var(--ink-muted); }
+.pager a:hover { color: var(--accent); }
+.pager__where { color: var(--ink-faint); }
+
+/* On a phone the three parts of the pager will not sit on one line without
+   the middle one shrinking to nothing useful, so it moves under them. */
+@media (max-width: 34rem) {
+  .pager {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+  .pager__where { order: 1; flex-basis: 100%; }
+}
+
+/* --------------------------------------------------------------------------
+   Search
+   -------------------------------------------------------------------------- */
+
+/* The reader operates this, so its boundary is --edge and not a rule: 3:1
+   against the white it is filled with and against the paper around it. */
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--edge);
+  background: var(--paper-raised);
+  padding: 0.55rem 0.85rem;
+  max-width: 34rem;
+}
+
+.search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-quiet);
+}
+
+.search-field input {
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  padding: 0;
+}
+/* The field's own ring is the focus ring; a second one inside it is noise. */
+.search-field input:focus { outline: none; }
+
+/* type="search" comes with a clear button drawn in the browser's blue, which
+   is the one thing on any page here that was not chosen. Redrawn in ink at
+   the weight of a piece of punctuation. It stays a real control - it is still
+   the browser's, so it still clears the field and still has its own label. */
+.search-field input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.85em;
+  height: 0.85em;
+  cursor: pointer;
+  background: var(--ink-muted);
+  -webkit-mask: var(--cross) center / contain no-repeat;
+  mask: var(--cross) center / contain no-repeat;
+}
+.search-field input::-webkit-search-cancel-button:hover { background: var(--ink); }
+
+/* Both of these quote the reader's own query back at them, and a query can
+   be one unbroken 60-character token. Without this the result count pushes
+   the whole page sideways - measured at 457px of content in a 390px viewport
+   before it was added. */
+.search-status,
+.empty {
+  overflow-wrap: anywhere;
+}
+
+.search-status {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-muted);
+  min-height: 1.5em;
+}
+
+.results { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
+
+/* Deliberately the same measurements as .doc: a result and a document row
+   are the same object seen from two directions, and a reader moving between
+   the document list and the search page should not feel the rhythm change. */
+.result {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 0 1.25rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--rule);
+}
+
+.result__thumb {
+  margin-left: -1px;
+  border: 1px solid var(--rule);
+  width: 3.5rem;
+  aspect-ratio: 17 / 22;
+  object-fit: cover;
+  object-position: top center;
+  background: var(--paper-sunk);
+}
+
+.result__where {
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+  margin: 0 0 0.25rem;
+}
+
+/* The link is the whole reason the row exists; it gets the ink and the title
+   weight, rather than being a quiet line above an excerpt. */
+.result__where a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration-color: var(--edge);
+}
+.result__where a:hover { color: var(--accent); }
+
+.result__excerpt {
+  font-family: var(--font-serif);
+  margin: 0;
+  color: var(--ink);
+}
+
+.result__excerpt mark {
+  background: var(--highlight);
+  color: var(--highlight-ink);
+  box-shadow: 0 1px 0 var(--highlight-edge);
+}
+
+/* Empty states know the corpus. The copy is written by the site builder, which
+   knows how many documents there are and which folders scanned badly. */
+.empty {
+  font-family: var(--font-serif);
+  color: var(--ink-muted);
+  max-width: var(--measure);
+  margin: var(--space-4) 0;
+}
+
+/* An empty state standing in for something that has a shape - a page that
+   would not render. It keeps the shape so the layout does not lurch. */
+.empty--boxed {
+  margin: 0;
+  padding: var(--space-4);
+  text-wrap: pretty;
+}
+
+/* --------------------------------------------------------------------------
+   Keyboard
+   -------------------------------------------------------------------------- */
+
+kbd {
+  border: 1px solid var(--edge);
+  border-bottom-width: 2px;
+  padding: 0.05em 0.35em;
+  background: var(--paper-raised);
+  font-size: 0.85em;
+}
+
+.shortcuts {
+  border: 1px solid var(--edge);
+  background: var(--paper-raised);
+  color: var(--ink);
+  padding: 1.25rem 1.5rem;
+  /* 24rem is 384px, which is wider than the narrowest screen this has to work
+     on. The min() is the whole fix. */
+  max-width: min(24rem, calc(100vw - 2rem));
+}
+
+.shortcuts__title {
+  font-size: var(--step-1);
+  margin: 0 0 var(--space-3);
+}
+
+.shortcuts::backdrop { background: rgb(28 26 23 / 0.45); }
+.shortcuts dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-1) var(--space-2); margin: 0; }
+.shortcuts dt { text-align: right; }
+.shortcuts dd { margin: 0; color: var(--ink-muted); }
+
+/* --------------------------------------------------------------------------
+   Tables
+   -------------------------------------------------------------------------- */
+
+.table-scroll { overflow-x: auto; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--step-0);
+}
+
+th, td {
+  text-align: left;
+  padding: var(--space-1) 0.9rem var(--space-1) 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: baseline;
+}
+
+th { font-weight: 600; color: var(--ink-muted); font-size: var(--step--1); }
+td.n, th.n { text-align: right; padding-right: 0; }
+
+/* A cell keeps its mono runs whole - a code, a control number, a checksum -
+   and `.table-scroll` above scrolls the table when that makes it too wide.
+   The rule is with the mono type it is about, in Type. */
+
+/* --------------------------------------------------------------------------
+   Accessibility overrides
+   -------------------------------------------------------------------------- */
+
+/* Asked for more contrast, give all of it: the two quiet inks collapse into
+   the one ink, every rule becomes an edge, and links stop being underlined in
+   a colour that is not their own. */
+@media (prefers-contrast: more) {
+  :root {
+    --ink-muted: var(--ink);
+    --ink-faint: var(--ink);
+    --rule: var(--edge);
+    --rule-strong: var(--edge);
+  }
+  .withheld { outline: 1px solid var(--ink); }
+  a { text-decoration-color: currentColor; }
+  .doc__meta .sep { color: var(--ink-muted); }
+}
+
+/* --------------------------------------------------------------------------
+   Forced colours
+   --------------------------------------------------------------------------
+   Windows High Contrast and its relatives throw away every background colour
+   an author chose and substitute two of the reader's own. That is right for
+   an interface and wrong for this archive, because here some of the colour is
+   the content: a redaction bar is a filled rectangle and nothing else, and
+   without its fill it is a gap in a sentence with no gap in it. Untreated,
+   every bar on every page turned white on a white ground and vanished, and
+   the four squares in the ribbon key went with them.
+
+   So the states are re-stated in the reader's own palette rather than in
+   ours. CanvasText for ink and for what replaced it, GrayText for an ordinary
+   page, LinkText for the one state that is a warning. The relationships
+   survive; the colours are the reader's. Nothing here uses
+   forced-color-adjust to smuggle our palette back in.
+   -------------------------------------------------------------------------- */
+
+@media (forced-colors: active) {
+  /* Absence, restated. */
+  .withheld {
+    background: CanvasText;
+    box-shadow: none;
+    outline: 1px solid Canvas;
+    outline-offset: -1px;
+  }
+
+  /* SVG fill is not forced, so the ribbon keeps whatever we give it - which
+     means it also keeps colours chosen against a paper that is no longer
+     there unless they are restated here. */
+  .ribbon { border-color: CanvasText; background: Canvas; }
+  .ribbon .r-plain { fill: GrayText; }
+  .ribbon .r-part { fill: CanvasText; fill-opacity: 0.5; }
+  .ribbon .r-full { fill: CanvasText; }
+  .ribbon .r-dark { fill: LinkText; }
+  /* Stroke is not forced either. The casing has to be the ground it is meant
+     to separate from, and the mark itself the reader's own highlight. */
+  .ribbon .r-here-casing { stroke: Canvas; }
+  .ribbon .r-here { stroke: Highlight; }
+
+  /* background-colour *is* forced, so the key has to be restated to match. */
+  .ribbon-key i { background: GrayText; }
+  .ribbon-key .k-part { background: CanvasText; opacity: 0.5; }
+  .ribbon-key .k-full { background: CanvasText; opacity: 1; }
+  .ribbon-key .k-dark { background: LinkText; }
+
+  /* A match: the reader's own selection colours, which is what it is. */
+  .text-layer .w.is-hit,
+  .result__excerpt mark {
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
+    outline: 1px solid HighlightText;
+    outline-offset: -1px;
+  }
+  .hit { background: none; outline: 2px solid Highlight; mix-blend-mode: normal; }
+  /* The two-tone frame is for a scan whose blacks are still there; forced
+     colours have replaced them, so one dashed line in the reader's own ink is
+     both simpler and correct. */
+  .hit--void {
+    outline: 2px dashed CanvasText;
+    outline-offset: 0;
+    box-shadow: none;
+  }
+
+  /* A low-confidence word keeps its dotted underline; forced colours would
+     otherwise give it the same treatment as the text around it. */
+  .text-layer .w.is-doubtful { text-decoration-color: GrayText; }
+
+  .doc__thumb, .thumbs__img, .result__thumb { border-color: CanvasText; }
+  .notice--warn { border-left-color: LinkText; }
+  .notice--warn strong { color: LinkText; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Printing an archive page should produce the page, not a screenshot of a
+   website: the furniture goes, the two columns become one, and every link
+   gets its destination spelled out because paper cannot be clicked. */
+@media print {
+  .masthead, .pager, .search-field, .skip { display: none; }
+  /* `display: none` loses to a <dialog>'s open state; this does not. */
+  .shortcuts, .shortcuts::backdrop { display: none !important; }
+  body { background: #fff; color: #000; }
+  .page-view { grid-template-columns: 1fr; }
+  .scan { position: static; }
+  .colophon { margin-top: var(--space-3); }
+  /* A redaction has to survive a printer that is out of colour. */
+  .withheld { background: #000; box-shadow: none; }
+  .withheld[data-code]::after { display: none; }
+  a[href]::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #555; }
+  /* Not for the anchors that are already the thing they point at. */
+  .thumbs a[href]::after, .doc__title a[href]::after { content: ""; }
+}

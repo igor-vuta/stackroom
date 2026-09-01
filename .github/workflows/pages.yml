@@ -1,0 +1,101 @@
+# Build the demo collection and publish it to GitHub Pages.
+#
+# This publishes the *invented* demo archive (see demo/README.md) as the
+# project's live demo: the Meridian Hollow collection at the site root and the
+# UK-jurisdiction Ridgeway collection under /ridgeway/. Everything is
+# regenerated from demo/build-demo.py on every run - no documents live in the
+# repository.
+#
+# Requires, once, in the repository settings:
+#   Settings -> Pages -> Build and deployment -> Source: GitHub Actions
+name: Publish the demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "demo/**"
+      - "src/**"
+      - "pyproject.toml"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time. cancel-in-progress is false on purpose: a half
+# finished deployment is worse than a queued one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  FORCE_COLOR: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # Early, because it is the step that fails when Pages has not been
+      # switched to "GitHub Actions" in the repository settings, and failing
+      # before the build runs saves everybody the wait.
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # poppler renders the pages; tesseract reads the scanned ones. The demo
+      # has one page in Cyrillic, hence the Russian data.
+      - name: Install poppler and tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            poppler-utils \
+            tesseract-ocr \
+            tesseract-ocr-rus
+
+      # dev brings reportlab, which writes the demo PDFs; search brings the
+      # pagefind binary for the search index.
+      - name: Install stackroom
+        run: pip install -e ".[dev,search]"
+
+      - name: What this runner has
+        run: stackroom doctor
+
+      # Writes the PDFs, builds both sites, and verifies that the built site
+      # still contains every feature the README screenshots claim.
+      - name: Build the demo
+        run: python demo/build-demo.py
+
+      - name: Assemble the published tree
+        run: |
+          mv demo/site ./_pages
+          mv demo/site-ridgeway ./_pages/ridgeway
+          du -sh ./_pages
+          echo "files: $(find ./_pages -type f | wc -l)"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./_pages
+          # Stackroom writes a .nojekyll file into the site root, and without
+          # this line the artifact silently drops every dotfile.
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

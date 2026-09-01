@@ -1,0 +1,194 @@
+{% extends "base.html.jinja" %}
+{#-
+  The redaction ledger: a finding aid for absence.
+
+  Every other archive tool treats a black box as damage to route around. Here it
+  is indexed, counted and attributed to the statute that authorised it, because
+  "Exemption 5 accounts for 41% of what was withheld" is frequently the story,
+  and until now somebody had to count it by hand.
+
+  The codes in the table below are links, and choosing one shows the pages
+  withheld under it. That is done with pre-rendered rows, one empty anchor per
+  code, and one `:target` rule per code in the block below - not with JSON and
+  a script. Three reasons, in order:
+
+    - It works with scripts off, which is the state this archive assumes.
+    - The state is in the URL, so a reader can send somebody "the pages this
+      release withheld under (b)(5)" and have that mean something.
+    - If the rules never arrive at all - an old browser, a stylesheet that
+      failed to load, a text browser - the reader still lands on the code they
+      asked for with every page listed under it. The failure mode is a longer
+      page, not a broken one.
+
+  The rows are assembled here rather than in the builder because the call that
+  renders this template belongs to another module. They are the same pages the
+  table counts, sorted by how much of each was withheld.
+-#}
+{% block title %}{{ t('title.join', page=t('withheld.heading'), site=collection.title) }}{% endblock %}
+
+{%- set page_rows = [] %}
+{%- for doc in collection.documents %}
+{%- for page in doc.pages if page.redactions %}
+{%- set _ = page_rows.append({'doc': doc, 'page': page, 'ratio': page.redaction_ratio}) %}
+{%- endfor %}
+{%- endfor %}
+{%- set page_rows = (page_rows|sort(attribute='ratio', reverse=true))[:200] %}
+
+{% block head %}
+{%- if legend and page_rows %}
+{#- One pair of rules per code actually used in this release. They cannot live
+    in the stylesheet: which codes exist is a fact about these documents, not
+    about the design, and the stylesheet is shared by every archive built with
+    this tool. -#}
+<style>
+{%- for code, label, count in legend %}
+{%- set slug = code|lower|replace('(', '')|replace(')', '')|replace('.', '')|replace(' ', '') %}
+#f-{{ slug }}:target ~ .codefilter__list > .codefilter__row:not(.cf-{{ slug }}) { display: none; }
+#f-{{ slug }}:target ~ .codefilter__note--{{ slug }} { display: block; }
+#f-{{ slug }}:target ~ .codefilter__note--all { display: none; }
+{%- endfor %}
+</style>
+{%- endif %}
+{% endblock %}
+
+{% block main %}
+<div class="wrap wrap--narrow">
+
+  <h1 class="page-title">{{ t('withheld.heading') }}</h1>
+  <p class="page-subtitle">{{ t('withheld.intro') }}</p>
+
+  {%- if not collection.stats.pages_with_redactions %}
+  <p class="empty">{{ t('withheld.nothing', count=collection.stats.pages) }}</p>
+  {%- else %}
+
+  <dl class="ledger">
+    <div>
+      <dt>{{ t('withheld.ledger_pages') }}</dt>
+      <dd>{{ n(collection.stats.pages_with_redactions) }}<small>{{ t('withheld.ledger_pages_note', total=collection.stats.pages, percent=pct(((collection.stats.pages_with_redactions / collection.stats.pages) * 100)|round|int)) }}</small></dd>
+    </div>
+    <div>
+      <dt>{{ t('withheld.ledger_boxes') }}</dt>
+      <dd>{{ n(collection.stats.redaction_boxes) }}<small>{{ t('withheld.ledger_boxes_note') }}</small></dd>
+    </div>
+    {#- Both shares, each with its denominator named, exactly as the front page
+        prints them - and most of all here, on the page whose whole subject is
+        this number. Either figure alone misleads, in opposite directions: one
+        page withheld in full out of a thousand is 100% of that page and 0.1% of
+        the release, and a reader given only the first has been told the agency
+        blacked out everything.
+
+        The notes are `home.ledger_withheld_note` and
+        `home.ledger_withheld_collection_note`, not withheld-page keys of their
+        own: the front page prints the same two numbers, and the two pages have
+        to say the same words about them. `withheld.ledger_share_note` said
+        "mean share of each page's content", which was a description of neither
+        what the code did then nor what it does now - see `pipeline.summarise`. -#}
+    <div>
+      <dt>{{ t('withheld.ledger_share') }}</dt>
+      <dd>{{ pct((collection.stats.redaction_ratio * 100)|round(1), digits=1) }}<small>{{ t('home.ledger_withheld_note', count=collection.stats.pages_with_redactions) }}</small></dd>
+      <dd>{{ pct((collection.stats.redaction_ratio_collection * 100)|round(1), digits=1) }}<small>{{ t('home.ledger_withheld_collection_note') }}</small></dd>
+    </div>
+  </dl>
+
+  <p class="section-note section-note--after">
+    <a href="{{ root }}withheld/negative/index.html">{{ t('withheld.see_negative') }}</a>
+  </p>
+
+  {%- if legend %}
+  <h2 class="section-title">{{ t('withheld.under_law') }}</h2>
+  <p class="section-note">{{ t('withheld.law_note') }}</p>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>{{ t('withheld.th_code') }}</th><th>{{ t('withheld.th_label') }}</th><th class="n">{{ t('withheld.th_pages') }}</th></tr>
+      </thead>
+      <tbody>
+        {%- for code, label, count in legend %}
+        {%- set slug = code|lower|replace('(', '')|replace(')', '')|replace('.', '')|replace(' ', '') %}
+        <tr>
+          <td>{% if page_rows %}<a class="mono mono--code" href="#f-{{ slug }}">{{ code }}</a>{% else %}<span class="mono mono--code">{{ code }}</span>{% endif %}</td>
+          <td>{{ label }}</td>
+          <td class="n num">{{ n(count) }}</td>
+        </tr>
+        {%- endfor %}
+      </tbody>
+    </table>
+  </div>
+  {%- else %}
+  <p class="empty">{{ t('withheld.no_codes', count=collection.stats.redaction_boxes) }}</p>
+  {%- endif %}
+
+  {%- if page_rows %}
+  <section class="codefilter" id="w-pages">
+    {#- The anchors carry the chosen code. They are empty because there is
+        nothing to see: what they do is give `:target` something to hold, and
+        give the reader a place for the browser to scroll to. -#}
+    {%- for code, label, count in legend %}
+    {%- set slug = code|lower|replace('(', '')|replace(')', '')|replace('.', '')|replace(' ', '') %}
+    <span class="codefilter__anchor" id="f-{{ slug }}"></span>
+    {%- endfor %}
+
+    <h2 class="section-title">{{ t('withheld.pages_heading') }}</h2>
+
+    <p class="section-note codefilter__note codefilter__note--all">
+      {%- if page_rows|length < collection.stats.pages_with_redactions %}
+      {{ t('withheld.rows_capped', shown=page_rows|length, count=collection.stats.pages_with_redactions) }}
+      {%- else %}
+      {{ t('withheld.rows_all') }}
+      {%- endif %}
+      {{ t('withheld.rows_uncited_note') }}</p>
+
+    {%- for code, label, count in legend %}
+    {%- set slug = code|lower|replace('(', '')|replace(')', '')|replace('.', '')|replace(' ', '') %}
+    <p class="section-note codefilter__note codefilter__note--{{ slug }}">
+      {%- set show_all %}<a href="#w-pages">{{ t('withheld.show_all') }}</a>{% endset %}
+      {{ t('withheld.showing_html', code=code, label=label, link=show_all) }}</p>
+    {%- endfor %}
+
+    <ul class="docs codefilter__list">
+      {%- for row in page_rows %}
+      {%- set thumbs = (row.page.thumbs|selectattr('format', 'equalto', 'webp')|list) or row.page.thumbs %}
+      <li class="doc codefilter__row{% for code in row.page.exemptions %} cf-{{ code|lower|replace('(', '')|replace(')', '')|replace('.', '')|replace(' ', '') }}{% endfor %}">
+        {%- if thumbs %}<img class="doc__thumb" src="{{ root }}{{ thumbs[0].path }}" width="72" height="93" loading="lazy" decoding="async" alt="">{% else %}<span class="doc__thumb" aria-hidden="true"></span>{% endif %}
+        <div>
+          <h3 class="doc__title"><a href="{{ root }}d/{{ row.doc.id }}/p/{{ row.page.number }}/index.html">{{ t('withheld.row_title', title=row.doc.title, number=row.page.number) }}</a></h3>
+          <p class="doc__meta">
+            <span>{{ t('withheld.row_share', percent=pct((row.ratio * 100)|round|int)) }}</span>
+            <span class="sep" aria-hidden="true">·</span>
+            <span>{{ t('page.redactions', count=row.page.redactions|length) }}</span>
+            {#- One span per code, not one span for the list. A code has to stay
+                whole - `b(7)(C)` broken after the first bracket reads as two
+                citations - and the way that is done is `white-space: nowrap`,
+                which cannot tell the difference between a code and a list of
+                them. Six codes joined into one span is a 40-character run
+                nothing may break, and it took this page 120px past the width
+                of a phone. Each code atomic, the line free to break between
+                them. -#}
+            {%- if row.page.exemptions %}<span class="sep" aria-hidden="true">·</span><span class="doc__codes">{% for code in row.page.exemptions %}<span class="mono mono--code">{{ code }}</span>{{ ', ' if not loop.last }}{% endfor %}</span>
+            {%- else %}<span class="sep" aria-hidden="true">·</span><span class="codefilter__uncited">{{ t('withheld.no_code_printed') }}</span>{% endif %}
+          </p>
+        </div>
+      </li>
+      {%- endfor %}
+    </ul>
+  </section>
+  {%- endif %}
+
+  {%- if gaps %}
+  <h2 class="section-title">{{ t('withheld.gaps_heading') }}</h2>
+  <p class="section-note">{{ t('withheld.gaps_note') }}</p>
+  <ul class="docs">
+    {%- for doc, a, b in gaps %}
+    <li class="doc doc--textonly">
+      <div>
+        <h3 class="doc__title"><a href="{{ root }}d/{{ doc.id }}/index.html">{{ doc.title }}</a></h3>
+        <p class="doc__meta">{% if a != b %}{{ t('withheld.gap_range_html', start=a, end=b) }}{% else %}{{ t('withheld.gap_one_html', start=a) }}{% endif %}</p>
+      </div>
+    </li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+
+  {%- endif %}
+</div>
+{% endblock %}

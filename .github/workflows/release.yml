@@ -1,0 +1,122 @@
+# Build the sdist and wheel on a version tag and publish them to PyPI with
+# trusted publishing.
+#
+# ---------------------------------------------------------------------------
+# One-time setup, before the first tag. Do it now; it cannot be done after the
+# workflow fails.
+#
+# 1. On PyPI, go to your account -> Publishing -> "Add a new pending publisher"
+#    (or, for a project that already exists, Manage project -> Publishing).
+#    Fill in:
+#
+#        PyPI project name:  stackroom
+#        Owner:              stackroom            <- the GitHub org or user
+#        Repository name:    stackroom
+#        Workflow name:      release.yml          <- this file's name, exactly
+#        Environment name:   pypi                 <- must match `environment:` below
+#
+#    That is the whole of it. No API token is created, no secret is stored in
+#    this repository, and nothing has to be rotated. PyPI mints a short-lived
+#    credential for a workflow that matches all five fields and nothing else.
+#
+# 2. In this repository: Settings -> Environments -> New environment -> `pypi`.
+#    Add required reviewers if you want a human to approve each release; the
+#    job will wait for them. This is also where a deployment branch or tag rule
+#    goes, so that only tags can deploy to it.
+#
+# 3. Nothing else. Do not add PYPI_API_TOKEN. If you have one, delete it.
+#
+# To release: update the version in pyproject.toml and the heading in
+# CHANGELOG.md, commit, then
+#
+#     git tag v0.1.0 && git push origin v0.1.0
+#
+# The tag must match the version in pyproject.toml; the build job checks and
+# fails loudly if it does not, because a wheel that says 0.1.0 published from a
+# tag that says 0.1.1 is unfixable afterwards.
+# ---------------------------------------------------------------------------
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_COLOR: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  build:
+    name: Build sdist and wheel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Check the tag matches the version in pyproject.toml
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          project="$(python -c 'import tomllib,pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
+          echo "tag=$tag  pyproject=$project"
+          if [ "$tag" != "$project" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $project in pyproject.toml."
+            exit 1
+          fi
+
+      - name: Build
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+
+      # twine check catches the README failing to render on PyPI, which is not
+      # something you can fix by re-uploading: a version number is spent once.
+      - name: Check the artifacts
+        run: |
+          python -m pip install --upgrade twine
+          twine check --strict dist/*
+          ls -l dist/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # The environment named here must be the one registered with PyPI as part
+    # of the trusted publisher, and it is where a required-reviewer rule takes
+    # effect if you add one.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/stackroom
+
+    permissions:
+      # Mandatory for trusted publishing: it is what lets the job ask GitHub
+      # for the OIDC token that PyPI exchanges for an upload credential.
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+      # No username, no password, no token: supplying any of them would take
+      # this out of the trusted-publishing flow.
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1

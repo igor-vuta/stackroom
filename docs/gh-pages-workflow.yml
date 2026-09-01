@@ -1,0 +1,144 @@
+# ---------------------------------------------------------------------------
+# Publish a Stackroom archive to GitHub Pages.
+#
+# This file is for YOUR documents repository, not for the stackroom project
+# itself. Copy it to:
+#
+#     .github/workflows/publish.yml
+#
+# in the repository that holds your PDFs, and change the three things marked
+# CHANGE ME below. Everything else works as it stands.
+#
+# It expects a layout like this:
+#
+#     your-repo/
+#       documents/            <- the PDFs, and stackroom.toml and about.md
+#         stackroom.toml
+#         about.md
+#         release-2025-001.pdf
+#         …
+#       .github/workflows/publish.yml
+#
+# Before the first run, once, in the repository settings:
+#
+#     Settings -> Pages -> Build and deployment -> Source: GitHub Actions
+#
+# Without that the workflow stops at "Configure Pages" with a message saying
+# so. It stops there deliberately: better a failure in ten seconds than after
+# forty minutes of OCR.
+#
+# What it costs: the build re-reads and re-renders every page on every run,
+# because Stackroom has no incremental mode. A few hundred pages is a couple of
+# minutes. Several thousand scanned pages is closer to an hour, most of it
+# Tesseract. GitHub's limit for a single job is six hours.
+# ---------------------------------------------------------------------------
+name: Publish the archive
+
+on:
+  push:
+    branches: [main]
+    # Only rebuild when the documents or the settings change - not when you fix
+    # a typo in the repository's own README.
+    # CHANGE ME (1/3): if your documents live somewhere other than documents/.
+    paths:
+      - "documents/**"
+      - ".github/workflows/publish.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time. cancel-in-progress is false on purpose: a half
+# finished deployment is worse than a queued one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Set this to true if your PDFs are in Git LFS. Left off by default
+          # because it costs a fetch; but with LFS and this off, checkout leaves
+          # pointer files behind and the archive publishes 130-byte text files
+          # where the documents should be.
+          lfs: false
+
+      # Early, because it is the step that fails when Pages has not been
+      # switched to "GitHub Actions" in the repository settings, and failing
+      # before the OCR runs saves everybody an hour.
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      # poppler renders the pages; tesseract reads the scanned ones.
+      #
+      # CHANGE ME (2/3): if your documents are not in English, add the language
+      # packs - tesseract-ocr-fra, tesseract-ocr-deu, tesseract-ocr-rus,
+      # tesseract-ocr-ara, and so on - and list the same codes under [ocr] in
+      # stackroom.toml. Tesseract will not guess.
+      - name: Install poppler and tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            poppler-utils \
+            tesseract-ocr
+
+      # The [search] extra brings the pagefind binary. Without it the archive
+      # still builds and every page is still readable; there is simply no
+      # search box.
+      #
+      # Pin the version once you are happy with the output: a build that
+      # silently changes when a new stackroom is released is a build you cannot
+      # reproduce. `pip install "stackroom[search]==0.1.0"`.
+      - name: Install stackroom
+        run: pip install "stackroom[search]"
+
+      # Prints what it found, and what is missing. When the site comes out
+      # wrong, this is the log to read first.
+      - name: What this runner has
+        run: stackroom doctor
+
+      # The build refuses to publish a document where a black box covers text
+      # that is still in the file: it stops, names the page, and exits non-zero,
+      # which fails this job and publishes nothing. That is the intended
+      # behaviour and there is no need for a separate `stackroom check` step -
+      # it would double the runtime to re-do work this step already does.
+      #
+      # CHANGE ME (3/3): the path to your documents.
+      - name: Build the archive
+        run: stackroom build ./documents --out ./site
+
+      # GitHub Pages will not serve a site over 1 GB, and a deployment that
+      # takes more than ten minutes is cancelled. Both numbers are much easier
+      # to act on here than in a failed deployment.
+      - name: How big is it
+        run: |
+          du -sh ./site
+          echo "files: $(find ./site -type f | wc -l)"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./site
+          # Required. Stackroom writes a .nojekyll file into the site root, and
+          # without this line the artifact silently drops every dotfile - which
+          # would leave the search index in a directory whose name starts with
+          # an underscore and nothing to stop Jekyll deleting it.
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

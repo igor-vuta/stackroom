@@ -1,0 +1,405 @@
+/* ==========================================================================
+   Stackroom self-hosted fonts
+   --------------------------------------------------------------------------
+   Everything here is local. No @import, no CDN, no font service, no external
+   URL of any kind - ARCHITECTURE.md guarantee 5: "An archive that phones home
+   is a log of who read what."
+
+   The .woff2 files sit beside this stylesheet and are produced by
+   tools/build-fonts.sh. If you change a `unicode-range` below without changing
+   the matching range in that script, pages will render in the fallback font
+   with no error anywhere. The two lists have to move together.
+
+   Faces
+     Stackroom Sans    variable, wght 400-600   interface, labels, metadata
+     Stackroom Serif   400 / 600 / 400 italic   reading text, notes, OCR
+     Stackroom Mono    400                      checksums, Bates numbers, paths
+
+   These are subsets of Source Sans 3, Source Serif 4 and IBM Plex Mono,
+   renamed because the SIL OFL reserves the names "Source" and "Plex" and a
+   subset is a Modified Version. See LICENSE-FONTS.md.
+   ========================================================================== */
+
+:root {
+  /* The stacks below name real faces in the order each platform will find one:
+     system-ui resolves to SF on macOS/iOS, Segoe UI on Windows and Roboto on
+     Android, and the explicit names after it cover older browsers and Linux,
+     where DejaVu and Liberation are what is actually installed. */
+
+  --font-sans:
+      "Stackroom Sans", "Stackroom Sans Fallback",
+      system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", "Noto Sans", "DejaVu Sans", "Liberation Sans",
+      Arial, sans-serif;
+
+  --font-serif:
+      "Stackroom Serif", "Stackroom Serif Fallback",
+      Charter, "Bitstream Charter", Georgia, Cambria,
+      "Noto Serif", "DejaVu Serif", "Liberation Serif",
+      "Times New Roman", Times, serif;
+
+  --font-mono:
+      "Stackroom Mono", "Stackroom Mono Fallback",
+      ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Cascadia Mono",
+      "Roboto Mono", "Noto Sans Mono", "DejaVu Sans Mono", "Liberation Mono",
+      "Courier New", monospace;
+}
+
+/* --------------------------------------------------------------------------
+   Metric-compatible fallbacks
+   --------------------------------------------------------------------------
+   With `font-display: swap` the page paints in a fallback first and then
+   reflows when the web font arrives. These three rules make the fallback's
+   line box identical to the web font's, so the swap does not move anything
+   vertically.
+
+   The numbers are not guesses. They are the fonts' own vertical metrics, read
+   out of the shipped files with fontTools; in all three families the OS/2
+   typo, OS/2 win and hhea metrics agree, so one value is correct on every
+   platform (Stackroom Mono's typo metrics differ but its USE_TYPO_METRICS bit
+   is clear, so browsers use hhea/win - which is the pair quoted here):
+
+     Stackroom Sans    ascent 1.000 em   descent 0.326 em   line gap 0
+     Stackroom Serif   ascent 1.036 em   descent 0.335 em   line gap 0
+     Stackroom Mono    ascent 1.025 em   descent 0.275 em   line gap 0
+
+   `size-adjust` is deliberately NOT set. It would need the x-height of the
+   font that actually renders first, and that differs per platform: measured
+   here, Source Sans's x-height is 0.478 em against Arial's 0.528 and Calibri's
+   0.478 - a 10% mismatch against one and none against the other. Segoe UI, SF
+   and Roboto could not be measured on this machine at all, and a single value
+   tuned to the one fallback we can measure would mis-size the majority of
+   readers. tools/README.md records the ratios for anyone who wants to revisit
+   this per platform. Only these rules carry overrides; the web fonts
+   themselves are left undistorted. */
+
+@font-face {
+  font-family: "Stackroom Sans Fallback";
+  /* Liberation before DejaVu. Both are installed on most Linux machines and
+     the browser takes the first entry it finds, so the old order handed every
+     Linux reader the widest face available. `local("Arial")` does not save
+     them: Chromium matches local() on the face's own names and does not follow
+     the fontconfig alias that makes Arial mean Liberation Sans, so on a Linux
+     box that entry is a miss and the next one decides.
+
+     Measured here with canvas.measureText over a 106-character line at 16px:
+     the old stack resolves to DejaVu Sans at 857.0px, the new one to Liberation
+     Sans at 756.0px, and the web font is 705.0px - so the swap goes from 0.823
+     of the fallback's width to 0.933 of it. Liberation Sans is
+     metric-compatible with Arial, which is what the entry before it is already
+     reaching for. No extra bytes, no extra request, and no effect at all on
+     macOS or Windows, where Segoe UI or Helvetica Neue resolves first and
+     neither of these two entries is ever reached.
+
+     What that is worth, measured on the demo over five loads each at Fast 3G
+     (1.6 Mbps, 150ms RTT), median CLS: front page 0.4621 -> 0.0085, document
+     page 0.1658 -> 0.0101. A page view barely moves - 0.1231 -> 0.1055 -
+     because what shifts there is the scan arriving, not the type.
+
+     The overrides below fix the line box; they cannot fix advance widths, and
+     that is what re-wraps a paragraph and moves everything under it. */
+  src: local("Segoe UI"), local("Roboto"), local("Helvetica Neue"),
+       local("Arial"), local("Liberation Sans"), local("DejaVu Sans");
+  ascent-override: 100.0%;
+  descent-override: 32.6%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Stackroom Serif Fallback";
+  /* Same reason, smaller effect, and worth stating in full rather than
+     assuming it follows: Liberation Serif carries Times metrics, which is what
+     the entry two above it asks for and does not get. Measured the same way,
+     the web serif is 752.0px against DejaVu Serif's 860.0px and Liberation
+     Serif's 684.0px - the error goes from 12.6% too wide to 9.9% too narrow.
+     Better, and it changes sign; it is not the near-match the sans stack gets,
+     and no ordering of the faces on this machine would give one. */
+  src: local("Georgia"), local("Charter"), local("Times New Roman"),
+       local("Liberation Serif"), local("Noto Serif"), local("DejaVu Serif");
+  ascent-override: 103.6%;
+  descent-override: 33.5%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Stackroom Mono Fallback";
+  /* Left alone deliberately, and checked rather than assumed: this stack has
+     DejaVu ahead of Liberation like the two above it did, but a monospaced
+     face has one advance width and these three agree on it. Measured on the
+     same line: DejaVu Sans Mono 1020.0px, Liberation Mono 1020.0px, Stackroom
+     Mono 1020.0px. There is no swap to absorb, so there is nothing to reorder
+     for - and a change with no measurement behind it does not belong in this
+     file. */
+  src: local("SF Mono"), local("Menlo"), local("Consolas"),
+       local("DejaVu Sans Mono"), local("Liberation Mono"), local("Courier New");
+  ascent-override: 102.5%;
+  descent-override: 27.5%;
+  line-gap-override: 0%;
+}
+
+/* --------------------------------------------------------------------------
+   Why the files are split, and why the order below matters
+   --------------------------------------------------------------------------
+   Each face is cut into script groups so an English page never downloads
+   Cyrillic or Greek outlines. A browser fetches a file only if a character on
+   the page falls inside its `unicode-range`.
+
+     core      Latin-1 + shared punctuation, currency, symbols
+               (English, German, French, Spanish, Portuguese, Italian, Dutch)
+     ext       Latin Extended-A/B + combining marks (Polish, Czech, Romanian,
+               Hungarian, Turkish, Baltic)
+     ext-rare  IPA and the romanisation diacritics of transliterated names
+     cyrillic  Cyrillic and supplements (Russian, Ukrainian)
+     greek     Greek, monotonic and polytonic
+
+   `cyrillic` is declared LAST in every family on purpose. It claims U+0301,
+   the combining acute, which `ext` also claims as part of U+0300-036F. CSS
+   Fonts 4 checks overlapping ranges in reverse declaration order, so the last
+   rule wins and a stressed Russian vowel takes its base letter and its accent
+   from the same file - which is the only way the accent lands in the right
+   place. Reorder these blocks and Russian stress marks drift.
+   ========================================================================== */
+
+/* -------------------------------- sans ----------------------------------- */
+/* One variable file per script group covers 400, 500 and 600. Measured: the
+   variable file is smaller than two static weights, and the UI uses at least
+   two. See tools/README.md for the numbers. */
+
+@font-face {
+  font-family: "Stackroom Sans";
+  src: url("stackroom-sans-var-core.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0152-0153, U+2000-206F, U+2070, U+2074-209C,
+                 U+20A0-20C0, U+2113, U+2122, U+2190-2193, U+2212, U+2215,
+                 U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Stackroom Sans";
+  src: url("stackroom-sans-var-ext.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-0151, U+0154-024F, U+0300-036F;
+}
+@font-face {
+  font-family: "Stackroom Sans";
+  src: url("stackroom-sans-var-ext-rare.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0250-02AF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F,
+                 U+A720-A7FF;
+}
+@font-face {
+  font-family: "Stackroom Sans";
+  src: url("stackroom-sans-var-greek.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: "Stackroom Sans";
+  src: url("stackroom-sans-var-cyrillic.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0460-052F, U+1C80-1C8A, U+2116,
+                 U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* -------------------------------- serif ---------------------------------- */
+/* Static instances, not a variable font: the reading column needs 400 far more
+   often than 600, and statics let the browser fetch only the weight in use.
+   Measured, Latin core: 400 alone is 29.4 KiB static against 48.6 KiB for the
+   variable Roman. tools/README.md has the full comparison. */
+
+/* serif 400 */
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400-core.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0152-0153, U+2000-206F, U+2070, U+2074-209C,
+                 U+20A0-20C0, U+2113, U+2122, U+2190-2193, U+2212, U+2215,
+                 U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400-ext.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-0151, U+0154-024F, U+0300-036F;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400-ext-rare.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0250-02AF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F,
+                 U+A720-A7FF;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400-greek.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400-cyrillic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0460-052F, U+1C80-1C8A, U+2116,
+                 U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* serif 600. Declared as 600-700 so that <strong>, which browsers request at
+   700, is served by the real semibold instead of a synthetic smear. Source
+   Serif 4 has no 700 static, and a faked bold on scanned-document prose is
+   noticeably worse than the designed weight. */
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-600-core.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0152-0153, U+2000-206F, U+2070, U+2074-209C,
+                 U+20A0-20C0, U+2113, U+2122, U+2190-2193, U+2212, U+2215,
+                 U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-600-ext.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-0151, U+0154-024F, U+0300-036F;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-600-ext-rare.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0250-02AF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F,
+                 U+A720-A7FF;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-600-greek.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-600-cyrillic.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0460-052F, U+1C80-1C8A, U+2116,
+                 U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* serif 400 italic */
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400i-core.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0152-0153, U+2000-206F, U+2070, U+2074-209C,
+                 U+20A0-20C0, U+2113, U+2122, U+2190-2193, U+2212, U+2215,
+                 U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400i-ext.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0100-0151, U+0154-024F, U+0300-036F;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400i-ext-rare.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0250-02AF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F,
+                 U+A720-A7FF;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400i-greek.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: "Stackroom Serif";
+  src: url("stackroom-serif-400i-cyrillic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0460-052F, U+1C80-1C8A, U+2116,
+                 U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* -------------------------------- mono ----------------------------------- */
+/* NO GREEK FILE, AND NO GREEK IN THE RANGES BELOW - THIS IS DELIBERATE.
+   IBM Plex Mono contains exactly one codepoint in the Greek blocks (U+03C0,
+   the maths pi) and cannot set Greek text: measured, it has 1 of the 69
+   letters monotonic Greek needs. Claiming the Greek range here would hand
+   Greek characters to a font with no Greek in it. Leaving the range out lets
+   them fall through to the system monospace font in --font-mono instead,
+   which can actually draw them. The mono face is for checksums, Bates numbers
+   and paths, so this costs nothing real. */
+
+@font-face {
+  font-family: "Stackroom Mono";
+  src: url("stackroom-mono-400-core.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0152-0153, U+2000-206F, U+2070, U+2074-209C,
+                 U+20A0-20C0, U+2113, U+2122, U+2190-2193, U+2212, U+2215,
+                 U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Stackroom Mono";
+  src: url("stackroom-mono-400-ext.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-0151, U+0154-024F, U+0300-036F;
+}
+@font-face {
+  font-family: "Stackroom Mono";
+  src: url("stackroom-mono-400-ext-rare.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0250-02AF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F,
+                 U+A720-A7FF;
+}
+@font-face {
+  font-family: "Stackroom Mono";
+  src: url("stackroom-mono-400-cyrillic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0460-052F, U+1C80-1C8A, U+2116,
+                 U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}

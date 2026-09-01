@@ -1,0 +1,35 @@
+{% extends "base.html.jinja" %}
+{% block title %}{{ t('title.join', page=t('nav.documents'), site=collection.title) }}{% endblock %}
+{% block main %}
+<div class="wrap wrap--narrow">
+  <h1 class="page-title">{{ t('nav.documents') }}</h1>
+  <p class="page-subtitle">{{ t('browse.subtitle',
+       documents=t('count.documents', count=collection.stats.documents),
+       pages=t('count.pages', count=collection.stats.pages)) }}</p>
+
+  <ul class="docs">
+    {%- for item in documents %}
+    <li class="doc">
+      {%- if item.thumb %}
+      <img class="doc__thumb" src="{{ root }}{{ item.thumb }}" width="72" height="93" loading="lazy" decoding="async" alt="">
+      {%- else %}<span class="doc__thumb" aria-hidden="true"></span>{% endif %}
+      <div>
+        <h2 class="doc__title"><a href="{{ item.url }}">{{ item.doc.title }}</a></h2>
+        <p class="doc__meta">
+          <span>{{ t('count.pages', count=item.doc.page_count) }}</span>
+          {%- if item.doc.bates_prefix %}<span class="sep" aria-hidden="true">·</span><span class="mono">{{ item.doc.bates_prefix }}</span>{% endif %}
+          {%- if item.doc.redacted_pages %}<span class="sep" aria-hidden="true">·</span><span>{{ t('doc.redacted', count=item.doc.redacted_pages) }}</span>{% endif %}
+          <span class="sep" aria-hidden="true">·</span><span class="num">{{ item.size_human }}</span>
+        </p>
+        {#- Hidden from assistive technology, like the strip on the front page
+            and for the same reason: the builder writes the reading of it into
+            an aria-label that does not survive being written, and a document
+            row already states its counts in the line above. The full reading
+            is on the document's own page, where the caption carries it. -#}
+        <div aria-hidden="true">{{ item.ribbon }}</div>
+      </div>
+    </li>
+    {%- endfor %}
+  </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+# Blank issues are off on purpose. Both templates carry the warning about not
+# posting a document that is not already public, and a blank issue is a way
+# past it. Anything that fits neither template belongs in Discussions.
+#
+# Maintainers: the Discussions link below needs Discussions turned on
+# (Settings -> General -> Features). If you would rather not run them, delete
+# that entry and set blank_issues_enabled to true.
+blank_issues_enabled: false
+
+contact_links:
+  - name: A redaction Stackroom failed to see
+    url: https://github.com/stackroom/stackroom/security/advisories/new
+    about: >
+      Text still recoverable under a black box that Stackroom said nothing
+      about. Report it here, privately - never as a public issue, and never
+      with the document attached. Read SECURITY.md first.
+
+  - name: How do I publish this / how do I host it
+    url: https://github.com/stackroom/stackroom/blob/main/docs/PUBLISHING.md
+    about: >
+      GitHub Pages, Netlify, Cloudflare, a plain web server, a USB stick, and
+      what to do when the archive is larger than the host allows.
+
+  - name: A question, or an idea you want to talk about first
+    url: https://github.com/stackroom/stackroom/discussions
+    about: >
+      Anything that changes the output layout, the search contract or one of
+      the six guarantees is worth discussing before it is written.
+
+  - name: Adding your jurisdiction's exemption codes
+    url: https://github.com/stackroom/stackroom/blob/main/CONTRIBUTING.md#adding-an-exemption-vocabulary-for-another-jurisdiction
+    about: >
+      Step by step, with a worked example. Mostly writing down what the statute
+      says; you do not have to be a programmer to start it.
