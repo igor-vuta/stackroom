@@ -20,8 +20,9 @@ permissions:
   contents: read
 
 env:
-  # Colour in the logs, and no interactive prompts from pip.
-  FORCE_COLOR: "1"
+  # No FORCE_COLOR here: the output-scraping tests capture the CLI's own
+  # output, and forcing Rich to emit ANSI into a captured pipe breaks their
+  # assertions. pytest's report is coloured by --color=yes on its own.
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
